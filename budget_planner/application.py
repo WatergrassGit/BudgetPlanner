@@ -13,8 +13,16 @@ class Application(tk.Tk):
         self.wm_title("Budget Planner")
         self.geometry("600x400")
 
+        # set up callback dictionary
+        self.callbacks = {}
+
         # set up project model
         self.data_model = ProjectModel()
+
+        # set up menu
+        self.option_add('*tearOff', False)
+        self.main_menu = menus.MainMenu(self, self.callbacks)
+        self.config(menu=self.main_menu)
 
         # set up budget view
         self.budget_view = v.BudgetView(self)

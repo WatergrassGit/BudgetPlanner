@@ -11,7 +11,7 @@ class Application(tk.Tk):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.wm_title("Budget Planner")
-        self.geometry("600x400")
+        self.geometry("800x600")
 
         # set up callback dictionary
         self.callbacks = {}
@@ -25,7 +25,8 @@ class Application(tk.Tk):
         self.config(menu=self.main_menu)
 
         # set up budget view
-        self.budget_view = v.BudgetView(self)
+        self.budget_view = v.BudgetView(self, self.callbacks)
+        self.budget_view.grid(column=0, row=0, sticky='nsew')
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)

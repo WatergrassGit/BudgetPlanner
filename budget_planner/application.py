@@ -14,7 +14,10 @@ class Application(tk.Tk):
         self.geometry("1280x720")
 
         # set up callback dictionary
-        self.callbacks = {}
+        self.callbacks = {
+            "save_template_as": self.save_template_as,
+            "get_template_data": self.get_template_data,
+        }
 
         # set up project model
         self.data_model = ProjectModel()
@@ -30,3 +33,11 @@ class Application(tk.Tk):
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
+
+    def save_template_as(self):
+        """Wrapper to call save_template_as method from data_model."""
+        self.data_model.save_template_as()
+
+    def get_template_data(self):
+        """Wrapper to call get_template_data method from data_model."""
+        return self.data_model.get_template_data()

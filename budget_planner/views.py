@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+from decimal import Decimal
 from .widgets import AutoScrollbar
 
 
@@ -112,10 +113,18 @@ class BudgetView(ttk.Frame):
             yscrollcommand=self.v_scroll.set
         )
 
+        # initiate data containers for view
+        self.template_data = self.callbacks['get_template_data']()
+        self.income_categories = []  # list of strings
+        self.expense_categories = []  # list of dictionaries with category name and category budget
+        self.job_list = []  # list of dictionaries with name / hourly_pay / hours / pay
+        # transaction list contains dictionaries with date / location / category / payment / deposit / net
+        self.transaction_list = []
+
         # fill BudgetView with content
-        self.add_content_category_frame()
         self.add_content_middle_frame()
         self.add_content_transaction_frame()
+        self.add_content_category_frame()
 
         # add styles
         self.styles = ttk.Style()
@@ -165,24 +174,47 @@ class BudgetView(ttk.Frame):
         for k, v in column_dictionary.items():
             self.income_tv.column(k, width=v)
 
-        temp_income_categories = ['Job', 'Other']
-        for index, value in enumerate(temp_income_categories):
-            if index % 2 == 0:
-                parity = 'even'
-            else:
-                parity = 'odd'
-            self.income_tv.insert(
-                parent='',
-                index=index,
-                iid=index,
-                values=(value, 0, 0),
-                tags=(parity,)
-            )
+        job_with_budget = []
+        income_jobs = self.template_data['job_list']
+        for job in income_jobs:
+            job_with_budget.append({job['name']: round(job['hourly_pay'] * job['hours'], 2)})
+        income_categories = self.template_data['income_categories']
+        for job in income_categories:
+            job_with_budget.append({job: Decimal('0.00')})
+        index = 0
+        income_budget = 0
+        income_actual = 0
+        for index, value in enumerate(job_with_budget):
+            for k, v in value.items():
+                if index % 2 == 0:
+                    parity = 'even'
+                else:
+                    parity = 'odd'
+                self.income_tv.insert(
+                    parent='',
+                    index=index,
+                    iid=index,
+                    values=(k, v, 0),
+                    tags=(parity,)
+                )
+                income_budget += v
+        index += 1
+        if index % 2 == 0:
+            parity = 'even'
+        else:
+            parity = 'odd'
+        self.income_tv.insert(
+            parent='',
+            index=index,
+            iid=index,
+            values=("SUBTOTAL", income_budget, income_actual),
+            tags=(parity,)
+        )
 
         self.income_tv.tag_configure("even", foreground="black", background="white")
         self.income_tv.tag_configure("odd", foreground="black", background="grey75")
 
-        self.income_tv.config(height=len(temp_income_categories))
+        self.income_tv.config(height=len(job_with_budget) + 1)
 
         # add content to expense treeview
         self.expense_tv_header.config(
@@ -210,24 +242,42 @@ class BudgetView(ttk.Frame):
         for k, v in column_dictionary.items():
             self.expense_tv.column(k, width=v)
 
-        temp_expense_categories = ['Food', 'Clothes', 'Education', 'Entertainment']
-        for index, value in enumerate(temp_expense_categories):
-            if index % 2 == 0:
-                parity = 'even'
-            else:
-                parity = 'odd'
-            self.expense_tv.insert(
-                parent='',
-                index=index,
-                iid=index,
-                values=(value, 0, 0),
-                tags=(parity,)
-            )
+        expense_categories = self.template_data['expense_categories']
+        index = 0
+        expense_budget = 0
+        expense_actual = 0
+        for index, value in enumerate(expense_categories):
+            for k, v in value.items():
+                if index % 2 == 0:
+                    parity = 'even'
+                else:
+                    parity = 'odd'
+                self.expense_tv.insert(
+                    parent='',
+                    index=index,
+                    iid=index,
+                    values=(k, v, 0),
+                    tags=(parity,)
+                )
+                expense_budget += v
+
+        index += 1
+        if index % 2 == 0:
+            parity = 'even'
+        else:
+            parity = 'odd'
+        self.expense_tv.insert(
+            parent='',
+            index=index,
+            iid=index,
+            values=("SUBTOTAL", expense_budget, expense_actual),
+            tags=(parity,)
+        )
 
         self.expense_tv.tag_configure("even", foreground="black", background="white")
         self.expense_tv.tag_configure("odd", foreground="black", background="grey75")
 
-        self.expense_tv.config(height=len(temp_expense_categories))
+        self.expense_tv.config(height=len(expense_categories) + 1)
 
         #
         self.net_income_tv.config(
@@ -241,7 +291,7 @@ class BudgetView(ttk.Frame):
 
         self.net_income_tv.insert(
             parent='', index=0, iid=0,
-            value=('NET INCOME:', 0, 0),
+            value=('NET INCOME:', income_budget - expense_budget, income_actual - expense_actual),
             tags=('header',)
         )
 
@@ -251,7 +301,7 @@ class BudgetView(ttk.Frame):
         """Function to add middle frame with content. Determines which data to load."""
 
         column_names = ('job', 'rate', 'hours', 'wages')
-        column_widths = (80, 80, 50, 50)
+        column_widths = (80, 80, 50, 60)
         column_dictionary = {}
         for i, col in enumerate(column_names):
             column_dictionary[col] = column_widths[i]
@@ -282,7 +332,7 @@ class BudgetView(ttk.Frame):
         for k, v in column_dictionary.items():
             self.middle_tv.column(k, width=v)
 
-        jobs = ['Main', 'Consulting']
+        jobs = self.template_data['job_list']
         for index, value in enumerate(jobs):
             if index % 2 == 0:
                 parity = 'even'
@@ -292,7 +342,12 @@ class BudgetView(ttk.Frame):
                 parent='',
                 index=index,
                 iid=index,
-                values=(value, 0, 0, 0),
+                values=(
+                    value['name'],
+                    value['hourly_pay'],
+                    value['hours'],
+                    round(value['hourly_pay'] * value['hours'], 2)
+                ),
                 tags=(parity,)
             )
 
@@ -338,7 +393,7 @@ class BudgetView(ttk.Frame):
         self.transaction_tv.column('deposit', width=80)
         self.transaction_tv.column('net', width=80)
 
-        transactions = ['Food', 'Food', 'Food', 'Invest']
+        transactions = self.template_data['transaction_list']
         for index, value in enumerate(transactions):
             if index % 2 == 0:
                 parity = 'even'
@@ -348,7 +403,14 @@ class BudgetView(ttk.Frame):
                 parent='',
                 index=index,
                 iid=index,
-                values=('1-Sep', 'NA', value, 0, 0, 0),
+                values=(
+                    value['date'],
+                    value['location'],
+                    value['category'],
+                    value['payment'],
+                    value['deposit'],
+                    value['payment'] - value['deposit']
+                ),
                 tags=(parity,)
             )
 

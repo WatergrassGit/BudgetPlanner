@@ -26,17 +26,21 @@ class BudgetView(ttk.Frame):
 
         # set up widgets for category frame
         category_label = ttk.Label(category_frame, text="Categories")
-        income_treeview = ttk.Treeview(category_frame)
-        expense_treeview = ttk.Treeview(category_frame)
-        net_income_label = ttk.Label(category_frame, text="Net Income:")
+        self.income_tv_header = ttk.Treeview(category_frame, show='tree')
+        self.income_tv = ttk.Treeview(category_frame, show='tree')
+        self.expense_tv_header = ttk.Treeview(category_frame, show='tree')
+        self.expense_tv = ttk.Treeview(category_frame, show='tree')
+        self.net_income_tv = ttk.Treeview(category_frame, show='tree')
 
         # set up widgets for middle frame
-        middle_label = ttk.Label(middle_frame, text="Job Income")
-        middle_treeview = ttk.Treeview(middle_frame)
+        middle_label = ttk.Label(middle_frame, text="Expected Job Income")
+        self.middle_tv_header = ttk.Treeview(middle_frame, show='tree')
+        self.middle_tv = ttk.Treeview(middle_frame, show='tree')
 
         # content for transaction frame
         transaction_label = ttk.Label(transaction_frame, text="Transactions")
-        transaction_treeview = ttk.Treeview(transaction_frame)
+        self.transaction_tv_header = ttk.Treeview(transaction_frame, show='tree')
+        self.transaction_tv = ttk.Treeview(transaction_frame, show='tree')
 
         # set up widgets for bottom frame
         previous_button = ttk.Button(
@@ -59,22 +63,26 @@ class BudgetView(ttk.Frame):
         # grid scrollable frame widgets
         title_label.grid(column=0, row=0, columnspan=3, sticky=(tk.W + tk.E))
         category_frame.grid(column=0, row=1, sticky='nwes')
-        middle_frame.grid(column=1, row=1, sticky='nwes')
+        middle_frame.grid(column=1, row=1, padx=20, sticky='nwes')
         transaction_frame.grid(column=2, row=1, sticky='nwes')
 
         # grid content for category frame
         category_label.grid(row=0)
-        income_treeview.grid(row=1)
-        expense_treeview.grid(row=2)
-        net_income_label.grid(row=3)
+        self.income_tv_header.grid(row=1)
+        self.income_tv.grid(row=2)
+        self.expense_tv_header.grid(row=3)
+        self.expense_tv.grid(row=4)
+        self.net_income_tv.grid(row=5, pady=(20, 0))
 
         # grid content for middle frame
         middle_label.grid(row=0)
-        middle_treeview.grid(row=1)
+        self.middle_tv_header.grid(row=1)
+        self.middle_tv.grid(row=2)
 
         # grid content for transaction frame
         transaction_label.grid(row=0)
-        transaction_treeview.grid(row=1)
+        self.transaction_tv_header.grid(row=1)
+        self.transaction_tv.grid(row=2)
 
         # grid content for bottom frame
         previous_button.grid(column=0, row=0)
@@ -104,6 +112,15 @@ class BudgetView(ttk.Frame):
             yscrollcommand=self.v_scroll.set
         )
 
+        # fill BudgetView with content
+        self.add_content_category_frame()
+        self.add_content_middle_frame()
+        self.add_content_transaction_frame()
+
+        # add styles
+        self.styles = ttk.Style()
+        self.set_styles()
+
         # set up events
         scrollable_frame.bind("<Configure>", self.get_canvas_size)
 
@@ -112,3 +129,253 @@ class BudgetView(ttk.Frame):
         self.canvas.configure(scrollregion=self.canvas.bbox('all'),
                               width=self.canvas_width,
                               height=self.canvas_height)
+
+    def add_content_category_frame(self):
+        """Function to add category frame with content. Determines which data to load."""
+
+        column_names = ('budget_type', 'budget', 'actual')
+        column_widths = (160, 80, 80)
+        column_dictionary = {}
+        for i, col in enumerate(column_names):
+            column_dictionary[col] = column_widths[i]
+
+        # add content to income treeview
+        self.income_tv_header.config(
+            columns=column_names,
+            selectmode='none',
+            height=1
+        )
+        self.income_tv_header.column('#0', width=0, stretch='NO')
+        for k, v in column_dictionary.items():
+            self.income_tv_header.column(k, width=v)
+
+        self.income_tv_header.insert(
+            parent='', index=0, iid=0,
+            value=('---INCOME---', 'Budget', 'Actual'),
+            tags=('header',)
+        )
+        self.income_tv_header.tag_configure("header", foreground="black", background="#70AD47")
+
+        self.income_tv.config(
+            columns=('budget_type', 'budget', 'actual'),
+            selectmode='browse',
+            height=20
+        )
+        self.income_tv.column('#0', width=0, stretch='NO')
+        for k, v in column_dictionary.items():
+            self.income_tv.column(k, width=v)
+
+        temp_income_categories = ['Job', 'Other']
+        for index, value in enumerate(temp_income_categories):
+            if index % 2 == 0:
+                parity = 'even'
+            else:
+                parity = 'odd'
+            self.income_tv.insert(
+                parent='',
+                index=index,
+                iid=index,
+                values=(value, 0, 0),
+                tags=(parity,)
+            )
+
+        self.income_tv.tag_configure("even", foreground="black", background="white")
+        self.income_tv.tag_configure("odd", foreground="black", background="grey75")
+
+        self.income_tv.config(height=len(temp_income_categories))
+
+        # add content to expense treeview
+        self.expense_tv_header.config(
+            columns=('budget_type', 'budget', 'actual'),
+            selectmode='none',
+            height=1
+        )
+        self.expense_tv_header.column('#0', width=0, stretch='NO')
+        for k, v in column_dictionary.items():
+            self.expense_tv_header.column(k, width=v)
+
+        self.expense_tv_header.insert(
+            parent='', index=0, iid=0,
+            value=('---EXPENSES---', 'Budget', 'Actual'),
+            tags=('header',)
+        )
+        self.expense_tv_header.tag_configure("header", foreground="black", background="#5B9BD5")
+
+        self.expense_tv.config(
+            columns=('budget_type', 'budget', 'actual'),
+            selectmode='browse',
+            height=20
+        )
+        self.expense_tv.column('#0', width=0, stretch='NO')
+        for k, v in column_dictionary.items():
+            self.expense_tv.column(k, width=v)
+
+        temp_expense_categories = ['Food', 'Clothes', 'Education', 'Entertainment']
+        for index, value in enumerate(temp_expense_categories):
+            if index % 2 == 0:
+                parity = 'even'
+            else:
+                parity = 'odd'
+            self.expense_tv.insert(
+                parent='',
+                index=index,
+                iid=index,
+                values=(value, 0, 0),
+                tags=(parity,)
+            )
+
+        self.expense_tv.tag_configure("even", foreground="black", background="white")
+        self.expense_tv.tag_configure("odd", foreground="black", background="grey75")
+
+        self.expense_tv.config(height=len(temp_expense_categories))
+
+        #
+        self.net_income_tv.config(
+            columns=('budget_type', 'budget', 'actual'),
+            selectmode='none',
+            height=1
+        )
+        self.net_income_tv.column('#0', width=0, stretch='NO')
+        for k, v in column_dictionary.items():
+            self.net_income_tv.column(k, width=v)
+
+        self.net_income_tv.insert(
+            parent='', index=0, iid=0,
+            value=('NET INCOME:', 0, 0),
+            tags=('header',)
+        )
+
+        self.net_income_tv.tag_configure("header", foreground="white", background="#4b707e")
+
+    def add_content_middle_frame(self):
+        """Function to add middle frame with content. Determines which data to load."""
+
+        column_names = ('job', 'rate', 'hours', 'wages')
+        column_widths = (80, 80, 50, 50)
+        column_dictionary = {}
+        for i, col in enumerate(column_names):
+            column_dictionary[col] = column_widths[i]
+
+        # add content to middle treeview
+        self.middle_tv_header.config(
+            columns=column_names,
+            selectmode='none',
+            height=1
+        )
+        self.middle_tv_header.column('#0', width=0, stretch='NO')
+        for k, v in column_dictionary.items():
+            self.middle_tv_header.column(k, width=v)
+
+        self.middle_tv_header.insert(
+            parent='', index=0, iid=0,
+            value=('Job', 'Hourly Pay', 'Hours', 'Pay'),
+            tags=('header',)
+        )
+        self.middle_tv_header.tag_configure("header", foreground="black", background="#A5A5A5")
+
+        self.middle_tv.config(
+            columns=column_names,
+            selectmode='browse',
+            height=20
+        )
+        self.middle_tv.column('#0', width=0, stretch='NO')
+        for k, v in column_dictionary.items():
+            self.middle_tv.column(k, width=v)
+
+        jobs = ['Main', 'Consulting']
+        for index, value in enumerate(jobs):
+            if index % 2 == 0:
+                parity = 'even'
+            else:
+                parity = 'odd'
+            self.middle_tv.insert(
+                parent='',
+                index=index,
+                iid=index,
+                values=(value, 0, 0, 0),
+                tags=(parity,)
+            )
+
+        self.middle_tv.tag_configure("even", foreground="black", background="#D9D9D9")
+        self.middle_tv.tag_configure("odd", foreground="black", background="white")
+
+        self.middle_tv.config(height=len(jobs))
+
+    def add_content_transaction_frame(self):
+        """Function to add transaction frame with content. Determines which data to load."""
+
+        # add content to income treeview
+        self.transaction_tv_header.config(
+            columns=('date', 'location', 'category', 'payment', 'deposit', 'net'),
+            selectmode='none',
+            height=1
+        )
+        self.transaction_tv_header.column('#0', width=0, stretch='NO')
+        self.transaction_tv_header.column('date', width=80)
+        self.transaction_tv_header.column('location', width=160)
+        self.transaction_tv_header.column('category', width=160)
+        self.transaction_tv_header.column('payment', width=80)
+        self.transaction_tv_header.column('deposit', width=80)
+        self.transaction_tv_header.column('net', width=80)
+
+        self.transaction_tv_header.insert(
+            parent='', index=0, iid=0,
+            value=('Date', 'Location', 'Category', 'Payment', 'Deposit', 'Net'),
+            tags=('header',)
+        )
+        self.transaction_tv_header.tag_configure("header", foreground="black", background="#ED7D31")
+
+        self.transaction_tv.config(
+            columns=('date', 'location', 'category', 'payment', 'deposit', 'net'),
+            selectmode='browse',
+            height=20
+        )
+        self.transaction_tv.column('#0', width=0, stretch='NO')
+        self.transaction_tv.column('date', width=80)
+        self.transaction_tv.column('location', width=160)
+        self.transaction_tv.column('category', width=160)
+        self.transaction_tv.column('payment', width=80)
+        self.transaction_tv.column('deposit', width=80)
+        self.transaction_tv.column('net', width=80)
+
+        transactions = ['Food', 'Food', 'Food', 'Invest']
+        for index, value in enumerate(transactions):
+            if index % 2 == 0:
+                parity = 'even'
+            else:
+                parity = 'odd'
+            self.transaction_tv.insert(
+                parent='',
+                index=index,
+                iid=index,
+                values=('1-Sep', 'NA', value, 0, 0, 0),
+                tags=(parity,)
+            )
+
+        self.transaction_tv.tag_configure("even", foreground="black", background="#B4C6E7")
+        self.transaction_tv.tag_configure("odd", foreground="black", background="#D9E1F2")
+
+        self.transaction_tv.config(height=len(transactions))
+
+    def set_styles(self):
+        #self.styles.theme_use('clam')
+        self.styles.configure('mystyle.Treeview', highlightthickness=0, bd=0, font=('Calibri', 11))
+        self.styles.layout("mystyle.Treeview", [('mystyle.Treeview.treearea', {'sticky': 'nswe'})])
+
+        self.styles.map(
+            "Treeview",
+            background=[('selected', 'focus', '#948383')],
+            foreground=[('selected', 'focus', 'white')]
+        )
+
+        self.income_tv_header.configure(style="mystyle.Treeview")
+        self.income_tv.configure(style="mystyle.Treeview")
+        self.expense_tv_header.configure(style="mystyle.Treeview")
+        self.expense_tv.configure(style="mystyle.Treeview")
+        self.net_income_tv.configure(style="mystyle.Treeview")
+
+        self.middle_tv_header.configure(style="mystyle.Treeview")
+        self.middle_tv.configure(style="mystyle.Treeview")
+
+        self.transaction_tv_header.configure(style="mystyle.Treeview")
+        self.transaction_tv.configure(style="mystyle.Treeview")

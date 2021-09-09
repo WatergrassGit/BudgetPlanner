@@ -11,7 +11,7 @@ class Application(tk.Tk):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.wm_title("Budget Planner")
-        self.geometry("800x600")
+        self.geometry("1280x720")
 
         # set up callback dictionary
         self.callbacks = {}

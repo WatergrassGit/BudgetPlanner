@@ -23,18 +23,60 @@ class ProjectModel:
         """
 
         self.template_data = {
-            'income_categories': ['Other'],  # list of strings
-            # list of dictionaries with category name and category budget
-            'expense_categories': [{'Miscellaneous': Decimal('0.00')}],
             # list of dictionaries with name / hourly_pay / hours
-            'job_list': [{'name': 'Main', 'hourly_pay': Decimal('15.00'), 'hours': Decimal('120.00')}],
+            'income_categories': [
+                {
+                    'name': 'Main',
+                    'hourly_pay': Decimal('15.00'),
+                    'hours': Decimal('120.00'),
+                    'tax_rate': Decimal('0.2')
+                },
+                {
+                    'name': 'Other',
+                    'hourly_pay': Decimal('12.00'),
+                    'hours': Decimal('10.00'),
+                    'tax_rate': Decimal('0.15')
+                }
+            ],
+            # list of dictionaries with category name and category budget
+            'expense_categories': [
+                {
+                    'name': 'Food',
+                    'expense_budget': Decimal('120.00'),
+                },
+                {
+                    'name': 'Miscellaneous',
+                    'expense_budget': Decimal('0.00'),
+                }
+            ],
             # transaction list contains dictionaries with date / location / category / payment / deposit
             'transaction_list': [
                 {
                     'date': '1970-01-01',
                     'location': 'Home',
+                    'category': 'Miscelaneous',
+                    'payment': Decimal('100.00'),
+                    'deposit': Decimal('0.00')
+                },
+                {
+                    'date': '1970-01-01',
+                    'location': 'Home',
                     'category': 'Miscellaneous',
                     'payment': Decimal('100.00'),
+                    'deposit': Decimal('0.00')
+                },
+                {
+                    'date': '1970-01-01',
+                    'location': 'Main',
+                    'category': 'Income',
+                    'payment': Decimal('100.00'),
+                    'deposit': Decimal('900.00')
+                },
+                {
+                    'date': '1970-01-01',
+                    'location': 'Home',
+                    'category': 'Food',
+                    'payment': Decimal('50.00'),
                     'deposit': Decimal('0.00')
                 }
             ]

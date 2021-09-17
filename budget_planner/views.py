@@ -148,16 +148,17 @@ class BudgetView(ttk.Frame):
         for i, col in enumerate(column_names):
             column_dictionary[col] = column_widths[i]
 
+        # set new names for data in template_data
+        income_categories = self.template_data['income_categories']
+        expense_categories = self.template_data['expense_categories']
+        transactions = self.template_data['transaction_list']
+
         # add content to income treeview
-        self.income_tv_header.config(
-            columns=column_names,
-            selectmode='none',
-            height=1
-        )
+        # add the header income treeview
+        self.income_tv_header.config(columns=column_names, selectmode='none', height=1)
         self.income_tv_header.column('#0', width=0, stretch='NO')
         for k, v in column_dictionary.items():
             self.income_tv_header.column(k, width=v)
-
         self.income_tv_header.insert(
             parent='', index=0, iid=0,
             value=('---INCOME---', 'Budget', 'Actual'),
@@ -165,17 +166,13 @@ class BudgetView(ttk.Frame):
         )
         self.income_tv_header.tag_configure("header", foreground="black", background="#70AD47")
 
-        self.income_tv.config(
-            columns=('budget_type', 'budget', 'actual'),
-            selectmode='browse',
-            height=20
-        )
+        # add the main income treeview
+        self.income_tv.config(columns=column_names, selectmode='browse')
         self.income_tv.column('#0', width=0, stretch='NO')
         for k, v in column_dictionary.items():
             self.income_tv.column(k, width=v)
 
         # add income categories to income treeview
-        income_categories = self.template_data['income_categories']
         index = 0
         income_budget = 0
         income_actual = 0
@@ -185,7 +182,7 @@ class BudgetView(ttk.Frame):
             else:
                 parity = 'odd'
             category_income_total = 0
-            for trans in self.template_data['transaction_list']:
+            for trans in transactions:
                 if trans['category'] in "Income" and trans['location'] in value['name']:
                     category_income_total += trans['deposit']
             self.income_tv.insert(
@@ -213,10 +210,10 @@ class BudgetView(ttk.Frame):
             values=("SUBTOTAL", income_budget, income_actual),
             tags=(parity,)
         )
-
+        # add colors based on tag
         self.income_tv.tag_configure("even", foreground="black", background="white")
         self.income_tv.tag_configure("odd", foreground="black", background="grey75")
-
+        # set height based on number of income categories plus a subtotal row
         self.income_tv.config(height=len(income_categories) + 1)
 
         # add content to expense treeview
@@ -246,8 +243,7 @@ class BudgetView(ttk.Frame):
             self.expense_tv.column(k, width=v)
 
         # add user rows to expense_treeview based on given categories
-        expense_categories = self.template_data['expense_categories']
-        expense_table_rows = len(expense_categories)
+        expense_table_rows = len(expense_categories)  # keep track of rows needed for treeview
         index = 0
         expense_budget = 0
         expense_actual = 0
@@ -258,7 +254,7 @@ class BudgetView(ttk.Frame):
                 parity = 'odd'
             # get cost of all transactions for a given expense category
             category_expense_total = 0
-            for trans in self.template_data['transaction_list']:
+            for trans in transactions:
                 if trans['category'] in value['name']:
                     category_expense_total += trans['payment']
             self.expense_tv.insert(
@@ -280,13 +276,11 @@ class BudgetView(ttk.Frame):
         category_expense_total = 0
         expense_category_names = [category['name'] for category in expense_categories]
         expense_category_names.append(tax_category_name)
-
-        for trans in self.template_data['transaction_list']:
+        for trans in transactions:
             if trans['category'] == tax_category_name:
                 category_expense_total += trans['payment']
-
         tax_total = 0
-        for ic in self.template_data['income_categories']:
+        for ic in income_categories:
             tax_total += ic['hourly_pay'] * ic['hours'] * ic['tax_rate']
         index += 1
         if index % 2 == 0:
@@ -305,7 +299,7 @@ class BudgetView(ttk.Frame):
 
         # add row for expense transactions which do not have a matching expense category (hide when empty)
         category_expense_total = 0
-        for trans in self.template_data['transaction_list']:
+        for trans in transactions:
             if trans['category'] not in expense_category_names:
                 category_expense_total += trans['payment']
         if category_expense_total > 0:
@@ -338,45 +332,39 @@ class BudgetView(ttk.Frame):
             tags=(parity,)
         )
         expense_table_rows += 1
-
+        # add colors based on tag
         self.expense_tv.tag_configure("even", foreground="black", background="white")
         self.expense_tv.tag_configure("odd", foreground="black", background="grey75")
-
+        # set number of rows
         self.expense_tv.config(height=expense_table_rows)
 
-        #
-        self.net_income_tv.config(
-            columns=('budget_type', 'budget', 'actual'),
-            selectmode='none',
-            height=1
-        )
+        # set up treeview to aggregate income and expense totals
+        self.net_income_tv.config(columns=column_names, selectmode='none', height=1)
         self.net_income_tv.column('#0', width=0, stretch='NO')
         for k, v in column_dictionary.items():
             self.net_income_tv.column(k, width=v)
-
         self.net_income_tv.insert(
             parent='', index=0, iid=0,
             value=('NET INCOME:', income_budget - expense_budget, income_actual - expense_actual),
             tags=('header',)
         )
-
         self.net_income_tv.tag_configure("header", foreground="white", background="#4b707e")
 
     def add_content_middle_frame(self):
         """Function to add middle frame with content. Determines which data to load."""
 
+        # set up general variables
         column_names = ('job', 'rate', 'hours', 'tax_rate', 'wages')
         column_widths = (80, 80, 50, 70, 60)
         column_dictionary = {}
         for i, col in enumerate(column_names):
             column_dictionary[col] = column_widths[i]
 
-        # add content to middle treeview
-        self.middle_tv_header.config(
-            columns=column_names,
-            selectmode='none',
-            height=1
-        )
+        # set new names for data in template_data
+        jobs = self.template_data['income_categories']
+
+        # add content to middle treeview header
+        self.middle_tv_header.config(columns=column_names, selectmode='none', height=1)
         self.middle_tv_header.column('#0', width=0, stretch='NO')
         for k, v in column_dictionary.items():
             self.middle_tv_header.column(k, width=v)
@@ -388,16 +376,12 @@ class BudgetView(ttk.Frame):
         )
         self.middle_tv_header.tag_configure("header", foreground="black", background="#A5A5A5")
 
-        self.middle_tv.config(
-            columns=column_names,
-            selectmode='browse',
-            height=20
-        )
+        # add content to middle treeview
+        self.middle_tv.config(columns=column_names, selectmode='browse', height=20)
         self.middle_tv.column('#0', width=0, stretch='NO')
         for k, v in column_dictionary.items():
             self.middle_tv.column(k, width=v)
 
-        jobs = self.template_data['income_categories']
         for index, value in enumerate(jobs):
             if index % 2 == 0:
                 parity = 'even'
@@ -419,25 +403,26 @@ class BudgetView(ttk.Frame):
 
         self.middle_tv.tag_configure("even", foreground="black", background="#D9D9D9")
         self.middle_tv.tag_configure("odd", foreground="black", background="white")
-
         self.middle_tv.config(height=len(jobs))
 
     def add_content_transaction_frame(self):
         """Function to add transaction frame with content. Determines which data to load."""
 
-        # add content to income treeview
-        self.transaction_tv_header.config(
-            columns=('date', 'location', 'category', 'payment', 'deposit', 'net'),
-            selectmode='none',
-            height=1
-        )
+        # set up transaction column names and widths
+        column_names = ('date', 'location', 'category', 'payment', 'deposit', 'net')
+        column_widths = (80, 160, 160, 80, 80, 80)
+        column_dictionary = {}
+        for i, col in enumerate(column_names):
+            column_dictionary[col] = column_widths[i]
+
+        # set new names for data in template_data
+        transactions = self.template_data['transaction_list']
+
+        # add content to transaction treeview header
+        self.transaction_tv_header.config(columns=column_names, selectmode='none', height=1)
         self.transaction_tv_header.column('#0', width=0, stretch='NO')
-        self.transaction_tv_header.column('date', width=80)
-        self.transaction_tv_header.column('location', width=160)
-        self.transaction_tv_header.column('category', width=160)
-        self.transaction_tv_header.column('payment', width=80)
-        self.transaction_tv_header.column('deposit', width=80)
-        self.transaction_tv_header.column('net', width=80)
+        for k, v in column_dictionary.items():
+            self.transaction_tv_header.column(k, width=v)
 
         self.transaction_tv_header.insert(
             parent='', index=0, iid=0,
@@ -446,20 +431,12 @@ class BudgetView(ttk.Frame):
         )
         self.transaction_tv_header.tag_configure("header", foreground="black", background="#ED7D31")
 
-        self.transaction_tv.config(
-            columns=('date', 'location', 'category', 'payment', 'deposit', 'net'),
-            selectmode='browse',
-            height=20
-        )
+        # add content to transaction treeview
+        self.transaction_tv.config(columns=column_names, selectmode='browse', height=20)
         self.transaction_tv.column('#0', width=0, stretch='NO')
-        self.transaction_tv.column('date', width=80)
-        self.transaction_tv.column('location', width=160)
-        self.transaction_tv.column('category', width=160)
-        self.transaction_tv.column('payment', width=80)
-        self.transaction_tv.column('deposit', width=80)
-        self.transaction_tv.column('net', width=80)
+        for k, v in column_dictionary.items():
+            self.transaction_tv.column(k, width=v)
 
-        transactions = self.template_data['transaction_list']
         for index, value in enumerate(transactions):
             if index % 2 == 0:
                 parity = 'even'
@@ -482,7 +459,6 @@ class BudgetView(ttk.Frame):
 
         self.transaction_tv.tag_configure("even", foreground="black", background="#B4C6E7")
         self.transaction_tv.tag_configure("odd", foreground="black", background="#D9E1F2")
-
         self.transaction_tv.config(height=len(transactions))
 
     def set_styles(self):

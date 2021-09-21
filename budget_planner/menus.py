@@ -28,6 +28,8 @@ class MainMenu(tk.Menu):
         self.menu_file.add_separator()
         self.menu_file.add_command(label="Exit", command=self.master.destroy)
 
+        self.menu_options.add_command(label="Add New Transaction...", command=self.callbacks["add_transaction"])
+
         # add items to help menu
         self.menu_help.add_command(label="Help", command=lambda: print("Coming soon..."))
         self.menu_help.add_separator()

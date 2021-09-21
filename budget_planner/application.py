@@ -17,6 +17,7 @@ class Application(tk.Tk):
         self.callbacks = {
             "save_template_as": self.save_template_as,
             "get_template_data": self.get_template_data,
+            "add_transaction": self.add_transaction,
         }
 
         # set up project model
@@ -41,3 +42,7 @@ class Application(tk.Tk):
     def get_template_data(self):
         """Wrapper to call get_template_data method from data_model."""
         return self.data_model.get_template_data()
+
+    def add_transaction(self):
+        """something here"""
+        self.budget_view.add_transaction()

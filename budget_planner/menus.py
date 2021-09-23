@@ -28,6 +28,7 @@ class MainMenu(tk.Menu):
         self.menu_file.add_separator()
         self.menu_file.add_command(label="Exit", command=self.master.destroy)
 
+        self.menu_options.add_command(label="Add New Expense Category...", command=self.callbacks["add_category"])
         self.menu_options.add_command(label="Add New Transaction...", command=self.callbacks["add_transaction"])
 
         # add items to help menu

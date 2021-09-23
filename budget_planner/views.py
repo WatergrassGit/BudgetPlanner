@@ -33,6 +33,12 @@ class BudgetView(ttk.Frame):
         self.expense_tv_header = ttk.Treeview(category_frame, show='tree')
         self.expense_tv = ttk.Treeview(category_frame, show='tree')
         self.net_income_tv = ttk.Treeview(category_frame, show='tree')
+        self.category_popup_menu = tk.Menu(self.expense_tv)
+        self.category_popup_menu.add_command(label="Add Category...", command=self.add_category)
+        self.category_popup_menu.add_command(label="Insert Category...", command=self.insert_category)
+        self.category_popup_menu.add_command(label="Edit Category...", command=self.edit_category)
+        self.category_popup_menu.add_separator()
+        self.category_popup_menu.add_command(label="Remove Category", command=self.delete_category)
 
         # set up widgets for middle frame
         middle_label = ttk.Label(middle_frame, text="Expected Job Income")
@@ -129,10 +135,16 @@ class BudgetView(ttk.Frame):
         self.transaction_list = []
 
         # fill BudgetView with content
+        self.category_column_names = ('#0', 'category', 'budget', 'actual')
+        self.editable_category_column_names = ('category', 'budget')
+        self.editable_category_column_datatypes = [str, Decimal]
+        self.category_column_widths = (0, 160, 80, 80)
+
         self.transaction_column_names = ('#0', 'date', 'location', 'category', 'payment', 'deposit', 'net')
         self.editable_transaction_column_names = ('date', 'location', 'category', 'payment', 'deposit')
         self.editable_transaction_column_datatypes = [str, str, str, Decimal, Decimal]
         self.transaction_column_widths = (0, 80, 160, 160, 80, 80, 80)
+
         self._update_frames()
 
         # add styles
@@ -141,6 +153,7 @@ class BudgetView(ttk.Frame):
 
         # set up events
         scrollable_frame.bind("<Configure>", self.get_canvas_size)
+        self.expense_tv.bind("<Button-3>", self.call_category_popup_menu)
         self.transaction_tv.bind("<Button-3>", self.call_transaction_popup_menu)
 
     def get_canvas_size(self, *args):
@@ -183,14 +196,14 @@ class BudgetView(ttk.Frame):
         self.income_tv.grid()
         self.expense_tv_header.grid()
         self.expense_tv.grid()
-        self.net_income_tv.grid()
+        self.net_income_tv.grid(pady=(20, 0))
         self.add_content_category_frame()  # repopulate
 
     def add_content_category_frame(self):
         """Function to add category frame with content. Determines which data to load."""
 
-        column_names = ('budget_type', 'budget', 'actual')
-        column_widths = (160, 80, 80)
+        column_names = self.category_column_names
+        column_widths = self.category_column_widths
         column_dictionary = dict(zip(column_names, column_widths))
 
         # set new names for data in template_data
@@ -200,10 +213,9 @@ class BudgetView(ttk.Frame):
 
         # add content to income treeview
         # add the header income treeview
-        self.income_tv_header.config(columns=column_names, selectmode='none', height=1)
-        self.income_tv_header.column('#0', width=0, stretch='NO')
+        self.income_tv_header.config(columns=column_names[1:], selectmode='none', height=1)
         for k, v in column_dictionary.items():
-            self.income_tv_header.column(k, width=v)
+            self.income_tv_header.column(k, width=v, stretch='NO')
         self.income_tv_header.insert(
             parent='', index=0, iid=0,
             value=('---INCOME---', 'Budget', 'Actual'),
@@ -212,10 +224,9 @@ class BudgetView(ttk.Frame):
         self.income_tv_header.tag_configure("header", foreground="black", background="#70AD47")
 
         # add the main income treeview
-        self.income_tv.config(columns=column_names, selectmode='browse')
-        self.income_tv.column('#0', width=0, stretch='NO')
+        self.income_tv.config(columns=column_names[1:], selectmode='browse')
         for k, v in column_dictionary.items():
-            self.income_tv.column(k, width=v)
+            self.income_tv.column(k, width=v, stretch='NO')
 
         # add income categories to income treeview
         index = 0
@@ -262,14 +273,9 @@ class BudgetView(ttk.Frame):
         self.income_tv.config(height=len(income_categories) + 1)
 
         # add content to expense treeview
-        self.expense_tv_header.config(
-            columns=('budget_type', 'budget', 'actual'),
-            selectmode='none',
-            height=1
-        )
-        self.expense_tv_header.column('#0', width=0, stretch='NO')
+        self.expense_tv_header.config(columns=column_names[1:], selectmode='none', height=1)
         for k, v in column_dictionary.items():
-            self.expense_tv_header.column(k, width=v)
+            self.expense_tv_header.column(k, width=v, stretch='NO')
 
         self.expense_tv_header.insert(
             parent='', index=0, iid=0,
@@ -278,14 +284,9 @@ class BudgetView(ttk.Frame):
         )
         self.expense_tv_header.tag_configure("header", foreground="black", background="#5B9BD5")
 
-        self.expense_tv.config(
-            columns=('budget_type', 'budget', 'actual'),
-            selectmode='browse',
-            height=20
-        )
-        self.expense_tv.column('#0', width=0, stretch='NO')
+        self.expense_tv.config(columns=column_names[1:], selectmode='browse', height=20)
         for k, v in column_dictionary.items():
-            self.expense_tv.column(k, width=v)
+            self.expense_tv.column(k, width=v, stretch='NO')
 
         # add user rows to expense_treeview based on given categories
         expense_table_rows = len(expense_categories)  # keep track of rows needed for treeview
@@ -300,26 +301,26 @@ class BudgetView(ttk.Frame):
             # get cost of all transactions for a given expense category
             category_expense_total = 0
             for trans in transactions:
-                if trans['category'] in value['name']:
+                if trans['category'] in value['category']:
                     category_expense_total += trans['payment']
             self.expense_tv.insert(
                 parent='',
                 index=index,
                 iid=index,
                 values=(
-                    value['name'],
-                    value['expense_budget'],
+                    value['category'],
+                    value['budget'],
                     category_expense_total
                 ),
                 tags=(parity,)
             )
-            expense_budget += value['expense_budget']
+            expense_budget += value['budget']
             expense_actual += category_expense_total
 
         # add row to expense treeview for income taxes
         tax_category_name = 'Income'
         category_expense_total = 0
-        expense_category_names = [category['name'] for category in expense_categories]
+        expense_category_names = [category['category'] for category in expense_categories]
         expense_category_names.append(tax_category_name)
         for trans in transactions:
             if trans['category'] == tax_category_name:
@@ -384,10 +385,9 @@ class BudgetView(ttk.Frame):
         self.expense_tv.config(height=expense_table_rows)
 
         # set up treeview to aggregate income and expense totals
-        self.net_income_tv.config(columns=column_names, selectmode='none', height=1)
-        self.net_income_tv.column('#0', width=0, stretch='NO')
+        self.net_income_tv.config(columns=column_names[1:], selectmode='none', height=1)
         for k, v in column_dictionary.items():
-            self.net_income_tv.column(k, width=v)
+            self.net_income_tv.column(k, width=v, stretch='NO')
         self.net_income_tv.insert(
             parent='', index=0, iid=0,
             value=('NET INCOME:', income_budget - expense_budget, income_actual - expense_actual),
@@ -500,6 +500,119 @@ class BudgetView(ttk.Frame):
         self.transaction_tv.tag_configure("odd", foreground="black", background="#D9E1F2")
         self.transaction_tv.config(height=len(transactions))
 
+    def call_category_popup_menu(self, event):
+        """Method to create a small popup menu for the expense category treeview"""
+
+        try:
+            self.category_popup_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.category_popup_menu.grab_release()
+
+    def add_category(self):
+        """Add new category to the expense category treeview by calling private method."""
+
+        self._modify_category_window(
+            call="add",
+            title="New Category",
+            entry_defaults=['Placeholder', Decimal(0)],
+            button_text="Add"
+        )
+
+    def insert_category(self):
+        """
+        Method which checks to see if we have a selected row in the expense category treeview.
+
+        If no row is selected this function quits. If a row is selected user is allowed to add
+        a new category above the selected row by calling a private method.
+        """
+
+        row = self.expense_tv.focus()  # get expense category treeview's selected row number
+        if row:  # doesn't run if empty string is returned
+            self._modify_category_window(
+                call="insert",
+                title="Insert Category",
+                entry_defaults=['Placeholder', Decimal(0)],
+                button_text="Insert",
+                row=row
+            )
+
+    def edit_category(self):
+        """
+        Method which allows user to update selected expense category information by calling a private method.
+
+        If no row is selected, nothing happens.
+        """
+
+        row = self.expense_tv.focus()  # get treeview row
+        if row:  # runs only if a row is selected
+            defaults = self.template_data['expense_categories'][int(row)]  # get data from selected treeview row
+            defaults = [defaults[d] for d in self.editable_category_column_names]
+            self._modify_category_window(
+                call="edit",
+                title="Edit Category",
+                entry_defaults=defaults,
+                button_text="Edit",
+                row=row
+            )
+
+    def delete_category(self):
+        """
+        Deletes selected row from expense category treeview and updates BudgetView.
+
+        If no row selected, nothing happens. This only applies for user created categories.
+        """
+
+        row = self.expense_tv.focus()
+        if row:
+            try:  # only works if
+                del self.template_data['expense_categories'][int(row)]  # remove selected treeview row
+            except IndexError:
+                # IndexError can occur if we select a category not created by user
+                pass
+            finally:
+                self._update_frames()
+
+    def _modify_category_window(self, call, title, entry_defaults, button_text, row=0):
+        """
+        Method used to add, edit or insert a row to the expense category treeview.
+
+        This is done by creating entry widgets that the user enters data into and then submits.
+        This is a private method called by methods which determine whether this method is
+        used to add, edit or insert data.
+        """
+
+        modify_window = tk.Toplevel(self)
+        modify_window.wm_title(title)
+
+        entry_names = self.editable_category_column_names
+        function_calls = self.editable_category_column_datatypes
+
+        entries = {}  # holds data submitted
+
+        def call_update_frames():
+            """
+            Helper function which extracts entry widgets' values. It then adds, inserts, or edits an expense category
+            to the active expense category list. It finally refreshes BudgetView.
+            """
+
+            new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
+            if call == "add":
+                self.template_data['expense_categories'].append(new_entry)
+            elif call == "insert":
+                self.template_data['expense_categories'].insert(int(row), new_entry)
+            elif call == "edit":
+                self.template_data['expense_categories'][int(row)] = new_entry
+            self._update_frames()
+
+        i = 0
+        for i, name in enumerate(entry_names):
+            ttk.Label(modify_window, text=name.title()).grid(column=i, row=0)
+            entries[name] = ttk.Entry(modify_window)
+            entries[name].insert(0, entry_defaults[i])
+            entries[name].grid(column=i, row=1)
+        modify_button = ttk.Button(modify_window, text=button_text, command=call_update_frames)
+        modify_button.grid(column=i, row=2, sticky='e')
+
     def call_transaction_popup_menu(self, event):
         """Method to create a small popup menu for the transaction treeview"""
 
@@ -509,7 +622,7 @@ class BudgetView(ttk.Frame):
             self.transaction_popup_menu.grab_release()
 
     def add_transaction(self):
-        """Add new transaction to transaction treeview by calling internal method."""
+        """Add new transaction to transaction treeview by calling private method."""
 
         self._modify_transactions_window(
             call="add",

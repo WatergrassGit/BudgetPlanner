@@ -41,12 +41,12 @@ class ProjectModel:
             # list of dictionaries with category name and category budget
             'expense_categories': [
                 {
-                    'name': 'Food',
-                    'expense_budget': Decimal('120.00'),
+                    'category': 'Food',
+                    'budget': Decimal('120.00'),
                 },
                 {
-                    'name': 'Miscellaneous',
-                    'expense_budget': Decimal('0.00'),
+                    'category': 'Miscellaneous',
+                    'budget': Decimal('0.00'),
                 }
             ],
             # transaction list contains dictionaries with date / location / category / payment / deposit

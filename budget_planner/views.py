@@ -341,6 +341,7 @@ class BudgetView(ttk.Frame):
             tags=(parity,)
         )
         expense_table_rows += 1
+        expense_budget += round(tax_total, 2)
         expense_actual += category_expense_total
 
         # add row for expense transactions which do not have a matching expense category (hide when empty)
@@ -362,6 +363,7 @@ class BudgetView(ttk.Frame):
                 tags=(parity,)
             )
             expense_table_rows += 1
+            expense_budget += Decimal('0.00')
             expense_actual += category_expense_total
 
         # add row for expense subtotals

@@ -130,6 +130,8 @@ class BudgetView(ttk.Frame):
 
         # fill BudgetView with content
         self.transaction_column_names = ('#0', 'date', 'location', 'category', 'payment', 'deposit', 'net')
+        self.editable_transaction_column_names = ('date', 'location', 'category', 'payment', 'deposit')
+        self.editable_transaction_column_datatypes = [str, str, str, Decimal, Decimal]
         self.transaction_column_widths = (0, 80, 160, 160, 80, 80, 80)
         self._update_frames()
 
@@ -189,9 +191,7 @@ class BudgetView(ttk.Frame):
 
         column_names = ('budget_type', 'budget', 'actual')
         column_widths = (160, 80, 80)
-        column_dictionary = {}
-        for i, col in enumerate(column_names):
-            column_dictionary[col] = column_widths[i]
+        column_dictionary = dict(zip(column_names, column_widths))
 
         # set new names for data in template_data
         income_categories = self.template_data['income_categories']
@@ -401,9 +401,7 @@ class BudgetView(ttk.Frame):
         # set up general variables
         column_names = ('job', 'rate', 'hours', 'tax_rate', 'wages')
         column_widths = (80, 80, 50, 70, 60)
-        column_dictionary = {}
-        for i, col in enumerate(column_names):
-            column_dictionary[col] = column_widths[i]
+        column_dictionary = dict(zip(column_names, column_widths))
 
         # set new names for data in template_data
         jobs = self.template_data['income_categories']
@@ -456,9 +454,7 @@ class BudgetView(ttk.Frame):
         # set up transaction column names and widths
         column_names = self.transaction_column_names
         column_widths = self.transaction_column_widths
-        column_dictionary = {}
-        for i, col in enumerate(column_names):
-            column_dictionary[col] = column_widths[i]
+        column_dictionary = dict(zip(column_names, column_widths))
 
         # set new name(s) for data in template_data
         transactions = self.template_data['transaction_list']
@@ -504,37 +500,6 @@ class BudgetView(ttk.Frame):
         self.transaction_tv.tag_configure("odd", foreground="black", background="#D9E1F2")
         self.transaction_tv.config(height=len(transactions))
 
-    def add_transaction(self):
-        """Add new transaction to transaction treeview. Refreshes all treeviews to accommodate changes."""
-
-        add_transaction_window = tk.Toplevel(self)
-        add_transaction_window.wm_title("New Transaction")
-
-        entry_names = ['date', 'location', 'category', 'payment', 'deposit']
-        entry_defaults = [date.today(), "home", "food", Decimal(100), Decimal(0)]
-        function_calls = [str, str, str, Decimal, Decimal]
-
-        entries = {}  # holds data submitted
-
-        def call_update_frames():
-            """
-            Helper function which extracts entry widgets' values, adds a new transaction to
-            the active transaction list and then refreshes BudgetView.
-            """
-
-            new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
-            self.template_data['transaction_list'].append(new_entry)
-            self._update_frames()
-
-        i = 0
-        for i, name in enumerate(entry_names):
-            ttk.Label(add_transaction_window, text=name.title()).grid(column=i, row=0)
-            entries[name] = ttk.Entry(add_transaction_window)
-            entries[name].insert(0, entry_defaults[i])
-            entries[name].grid(column=i, row=1)
-        add_transaction_button = ttk.Button(add_transaction_window, text="Add", command=call_update_frames)
-        add_transaction_button.grid(column=i, row=2, sticky='e')
-
     def call_transaction_popup_menu(self, event):
         """Method to create a small popup menu for the transaction treeview"""
 
@@ -543,42 +508,52 @@ class BudgetView(ttk.Frame):
         finally:
             self.transaction_popup_menu.grab_release()
 
+    def add_transaction(self):
+        """Add new transaction to transaction treeview by calling internal method."""
+
+        self._modify_transactions_window(
+            call="add",
+            title="New Transaction",
+            entry_defaults=[date.today(), "home", "food", Decimal(100), Decimal(0)],
+            button_text="Add"
+        )
+
     def insert_transaction(self):
         """
         Method which checks to see if we have a selected row in the transaction treeview.
 
-        If not row is selected this function quits. If a row is selected user is allowed to add
-        a new transaction above the selected row.
+        If no row is selected this function quits. If a row is selected user is allowed to add
+        a new transaction above the selected row by calling a private method.
         """
 
         row = self.transaction_tv.focus()  # get transaction treeview selected row number
         if row:  # doesn't run if empty string is returned
-            add_transaction_window = tk.Toplevel(self)
-            add_transaction_window.wm_title("Insert Transaction")
+            self._modify_transactions_window(
+                call="insert",
+                title="Insert Transaction",
+                entry_defaults=[date.today(), "Home", "Food", Decimal(100), Decimal(0)],
+                button_text="Insert",
+                row=row
+            )
 
-            entry_names = ['date', 'location', 'category', 'payment', 'deposit']
-            entry_defaults = [date.today(), "Home", "Food", Decimal(100), Decimal(0)]
-            function_calls = [str, str, str, Decimal, Decimal]
+    def edit_transaction(self):
+        """
+        Method which allows user to update selected transaction information by calling a private method.
 
-            entries = {}  # holds data submitted in entry widgets
+        If no row is selected, nothing happens.
+        """
 
-            def call_update_frames():
-                """
-                Extracts entry widgets' values, updates active transaction list and then calls for BudgetView refresh.
-                """
-
-                new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
-                self.template_data['transaction_list'].insert(int(row), new_entry)
-                self._update_frames()
-
-            i = 0
-            for i, name in enumerate(entry_names):
-                ttk.Label(add_transaction_window, text=name.title()).grid(column=i, row=0)
-                entries[name] = ttk.Entry(add_transaction_window)
-                entries[name].insert(0, entry_defaults[i])
-                entries[name].grid(column=i, row=1)
-            add_transaction_button = ttk.Button(add_transaction_window, text="Update", command=call_update_frames)
-            add_transaction_button.grid(column=i, row=2, sticky='e')
+        row = self.transaction_tv.focus()  # get treeview row
+        if row:  # runs only if a row is selected
+            defaults = self.template_data['transaction_list'][int(row)]  # get data from selected treeview row
+            defaults = [defaults[d] for d in self.editable_transaction_column_names]
+            self._modify_transactions_window(
+                call="edit",
+                title="Edit Transaction",
+                entry_defaults=defaults,
+                button_text="Edit",
+                row=row
+            )
 
     def delete_transaction(self):
         """Deletes selected row from transactions and updates BudgetView. If no row selected, nothing happens."""
@@ -588,39 +563,46 @@ class BudgetView(ttk.Frame):
             del self.template_data['transaction_list'][int(row)]  # remove selected treeview row
             self._update_frames()
 
-    def edit_transaction(self):
+    def _modify_transactions_window(self, call, title, entry_defaults, button_text, row=0):
         """
-        Method which allows user to update selected transaction information.
+        Method used to add, edit or insert a row to the transactions treeview.
 
-        If no row is selected, nothing happens.
+        This is done by creating entry widgets that the user enters data into and then submits.
+        This is a private method called by methods which determine whether this method is
+        used to add, edit or insert data.
         """
 
-        row = self.transaction_tv.focus()  # get treeview row
-        if row:  # runs only if a row is selected
-            add_transaction_window = tk.Toplevel(self)
-            add_transaction_window.wm_title("Edit Transaction")
+        modify_transaction_window = tk.Toplevel(self)
+        modify_transaction_window.wm_title(title)
 
-            entry_names = ['date', 'location', 'category', 'payment', 'deposit']
-            entry_defaults = self.template_data['transaction_list'][int(row)]  # get data from selected treeview row
-            function_calls = [str, str, str, Decimal, Decimal]
+        entry_names = self.editable_transaction_column_names
+        function_calls = self.editable_transaction_column_datatypes
 
-            entries = {}  # holds data submitted in entry widgets
+        entries = {}  # holds data submitted
 
-            def call_update_frames():
-                """Helper function which extracts entry widget values and then calls for BudgetView refresh."""
+        def call_update_frames():
+            """
+            Helper function which extracts entry widgets' values. It then adds, inserts, or edits a transaction to
+            the active transaction list. It finally refreshes BudgetView.
+            """
 
-                new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
+            new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
+            if call == "add":
+                self.template_data['transaction_list'].append(new_entry)
+            elif call == "insert":
+                self.template_data['transaction_list'].insert(int(row), new_entry)
+            elif call == "edit":
                 self.template_data['transaction_list'][int(row)] = new_entry
-                self._update_frames()
+            self._update_frames()
 
-            i = 0
-            for i, name in enumerate(entry_names):
-                ttk.Label(add_transaction_window, text=name.title()).grid(column=i, row=0)
-                entries[name] = ttk.Entry(add_transaction_window)
-                entries[name].insert(0, entry_defaults[name])
-                entries[name].grid(column=i, row=1)
-            add_transaction_button = ttk.Button(add_transaction_window, text="Update", command=call_update_frames)
-            add_transaction_button.grid(column=i, row=2, sticky='e')
+        i = 0
+        for i, name in enumerate(entry_names):
+            ttk.Label(modify_transaction_window, text=name.title()).grid(column=i, row=0)
+            entries[name] = ttk.Entry(modify_transaction_window)
+            entries[name].insert(0, entry_defaults[i])
+            entries[name].grid(column=i, row=1)
+        modify_transaction_button = ttk.Button(modify_transaction_window, text=button_text, command=call_update_frames)
+        modify_transaction_button.grid(column=i, row=2, sticky='e')
 
     def set_styles(self):
         #self.styles.theme_use('clam')

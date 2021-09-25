@@ -10,9 +10,7 @@ class ProjectModel:
     def __init__(self):
         self.templates_path = Path("budget_planner", "templates")
 
-        self.initiate_templates_directory()
-
-        # initiate template dict
+        # initiate template dictionary and load data from file or default
         self.template_data = {}
         self.get_template_data()
 
@@ -106,18 +104,15 @@ class ProjectModel:
     def save_template_as(self):
         """Save current budget as a template."""
 
-        income_df = pd.DataFrame(self.template_data['income_categories'])
-        expense_df = pd.DataFrame(self.template_data['expense_categories'])
-        transaction_df = pd.DataFrame(self.template_data['transactions'])
-
         self.initiate_templates_directory()
         self.initiate_default_template_directory()
-        income_filepath = Path(self.templates_path, "default_template", "income.csv")
-        expense_filepath = Path(self.templates_path, "default_template", "expense.csv")
-        transaction_filepath = Path(self.templates_path, "default_template", "transaction.csv")
-        income_df.to_csv(income_filepath, index=False)
-        expense_df.to_csv(expense_filepath, index=False)
-        transaction_df.to_csv(transaction_filepath, index=False)
+
+        data_groups = ['income_categories', 'expense_categories', 'transactions']
+        file_names = ['income.csv', 'expense.csv', 'transaction.csv']
+        for i in range(3):
+            df = pd.DataFrame(self.template_data[data_groups[i]])
+            filepath = Path(self.templates_path, 'default_template', file_names[i])
+            df.to_csv(filepath, index=False)
 
     def load_active_template(self):
         """Load currently active budget template"""
@@ -134,6 +129,8 @@ class ProjectModel:
                                     converters={"hourly_pay": Decimal, "hours": Decimal, "tax_rate": Decimal})
         except FileNotFoundError:
             return ''
+        except pd.errors.EmptyDataError:
+            income_df = pd.DataFrame()
         income_lod = income_df.to_dict('records')  # list of dictionaries
         try:
             expense_df = pd.read_csv(expense_filepath, index_col=False,
@@ -141,6 +138,8 @@ class ProjectModel:
                                      converters={"budget": Decimal})
         except FileNotFoundError:
             return ''
+        except pd.errors.EmptyDataError:
+            expense_df = pd.DataFrame()
         expense_lod = expense_df.to_dict('records')  # list of dictionaries
         try:
             transaction_df = pd.read_csv(transaction_filepath, index_col=False,
@@ -148,14 +147,14 @@ class ProjectModel:
                                          converters={"outlay": Decimal, "inflow": Decimal})
         except FileNotFoundError:
             return ''
+        except pd.errors.EmptyDataError:
+            transaction_df = pd.DataFrame()
         transaction_lod = transaction_df.to_dict('records')  # list of dictionaries
 
         return_file = {
             "income_categories": income_lod,
             "expense_categories": expense_lod,
             "transactions": transaction_lod}
-
-        print('this should only run once')
 
         return return_file
 

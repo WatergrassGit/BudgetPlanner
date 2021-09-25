@@ -16,7 +16,6 @@ class Application(tk.Tk):
         # set up callback dictionary
         self.callbacks = {
             "save_template_as": self.save_template_as,
-            "get_template_data": self.get_template_data,
             "add_transaction": self.add_transaction,
             "add_category": self.add_category,
         }

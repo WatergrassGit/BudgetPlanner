@@ -127,21 +127,16 @@ class BudgetView(ttk.Frame):
         )
 
         # initiate data containers for view
-        self.template_data = self.callbacks['get_template_data']()
-        self.income_categories = []  # list of strings
-        self.expense_categories = []  # list of dictionaries with category name and category budget
-        self.job_list = []  # list of dictionaries with name / hourly_pay / hours / pay
-        # transaction list contains dictionaries with date / location / category / payment / deposit / net
-        self.transaction_list = []
+        self.template_data = master.data_model.template_data  # not a copy
 
         # fill BudgetView with content
         self.category_column_names = ('#0', 'category', 'budget', 'actual')
-        self.editable_category_column_names = ('category', 'budget')
+        self.editable_category_column_names = self.category_column_names[1:3]
         self.editable_category_column_datatypes = [str, Decimal]
         self.category_column_widths = (0, 160, 80, 80)
 
-        self.transaction_column_names = ('#0', 'date', 'location', 'category', 'payment', 'deposit', 'net')
-        self.editable_transaction_column_names = ('date', 'location', 'category', 'payment', 'deposit')
+        self.transaction_column_names = ('#0', 'date', 'merchant', 'category', 'outlay', 'inflow', 'net')
+        self.editable_transaction_column_names = self.transaction_column_names[1:6]
         self.editable_transaction_column_datatypes = [str, str, str, Decimal, Decimal]
         self.transaction_column_widths = (0, 80, 160, 160, 80, 80, 80)
 
@@ -209,7 +204,7 @@ class BudgetView(ttk.Frame):
         # set new names for data in template_data
         income_categories = self.template_data['income_categories']
         expense_categories = self.template_data['expense_categories']
-        transactions = self.template_data['transaction_list']
+        transactions = self.template_data['transactions']
 
         # add content to income treeview
         # add the header income treeview
@@ -239,8 +234,8 @@ class BudgetView(ttk.Frame):
                 parity = 'odd'
             category_income_total = 0
             for trans in transactions:
-                if trans['category'] in "Income" and trans['location'] in value['name']:
-                    category_income_total += trans['deposit']
+                if trans['category'] in "Income" and trans['merchant'] in value['name']:
+                    category_income_total += trans['inflow']
             self.income_tv.insert(
                 parent='',
                 index=index,
@@ -301,14 +296,14 @@ class BudgetView(ttk.Frame):
             # get cost of all transactions for a given expense category
             category_expense_total = 0
             for trans in transactions:
-                if trans['category'] in value['category']:
-                    category_expense_total += trans['payment']
+                if trans['category'] in value['name']:
+                    category_expense_total += trans['outlay']
             self.expense_tv.insert(
                 parent='',
                 index=index,
                 iid=index,
                 values=(
-                    value['category'],
+                    value['name'],
                     value['budget'],
                     category_expense_total
                 ),
@@ -320,11 +315,11 @@ class BudgetView(ttk.Frame):
         # add row to expense treeview for income taxes
         tax_category_name = 'Income'
         category_expense_total = 0
-        expense_category_names = [category['category'] for category in expense_categories]
+        expense_category_names = [category['name'] for category in expense_categories]
         expense_category_names.append(tax_category_name)
         for trans in transactions:
             if trans['category'] == tax_category_name:
-                category_expense_total += trans['payment']
+                category_expense_total += trans['outlay']
         tax_total = 0
         for ic in income_categories:
             tax_total += ic['hourly_pay'] * ic['hours'] * ic['tax_rate']
@@ -348,7 +343,7 @@ class BudgetView(ttk.Frame):
         category_expense_total = 0
         for trans in transactions:
             if trans['category'] not in expense_category_names:
-                category_expense_total += trans['payment']
+                category_expense_total += trans['outlay']
         if category_expense_total > 0:
             index += 1
             if index % 2 == 0:
@@ -459,7 +454,7 @@ class BudgetView(ttk.Frame):
         column_dictionary = dict(zip(column_names, column_widths))
 
         # set new name(s) for data in template_data
-        transactions = self.template_data['transaction_list']
+        transactions = self.template_data['transactions']
 
         # add content to transaction treeview header
         self.transaction_tv_header.config(columns=column_names[1:], selectmode='none', height=1)
@@ -489,11 +484,11 @@ class BudgetView(ttk.Frame):
                 iid=index,
                 values=(
                     value['date'],
-                    value['location'],
+                    value['merchant'],
                     value['category'],
-                    value['payment'],
-                    value['deposit'],
-                    value['deposit'] - value['payment']
+                    value['outlay'],
+                    value['inflow'],
+                    value['inflow'] - value['outlay']
                 ),
                 tags=(parity,)
             )
@@ -660,7 +655,7 @@ class BudgetView(ttk.Frame):
 
         row = self.transaction_tv.focus()  # get treeview row
         if row:  # runs only if a row is selected
-            defaults = self.template_data['transaction_list'][int(row)]  # get data from selected treeview row
+            defaults = self.template_data['transactions'][int(row)]  # get data from selected treeview row
             defaults = [defaults[d] for d in self.editable_transaction_column_names]
             self._modify_transactions_window(
                 call="edit",
@@ -675,7 +670,7 @@ class BudgetView(ttk.Frame):
 
         row = self.transaction_tv.focus()
         if row:
-            del self.template_data['transaction_list'][int(row)]  # remove selected treeview row
+            del self.template_data['transactions'][int(row)]  # remove selected treeview row
             self._update_frames()
 
     def _modify_transactions_window(self, call, title, entry_defaults, button_text, row=0):
@@ -703,11 +698,11 @@ class BudgetView(ttk.Frame):
 
             new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
             if call == "add":
-                self.template_data['transaction_list'].append(new_entry)
+                self.template_data['transactions'].append(new_entry)
             elif call == "insert":
-                self.template_data['transaction_list'].insert(int(row), new_entry)
+                self.template_data['transactions'].insert(int(row), new_entry)
             elif call == "edit":
-                self.template_data['transaction_list'][int(row)] = new_entry
+                self.template_data['transactions'][int(row)] = new_entry
             self._update_frames()
 
         i = 0

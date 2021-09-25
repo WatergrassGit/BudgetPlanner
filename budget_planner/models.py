@@ -1,5 +1,5 @@
 import os
-import json
+import pandas as pd
 from decimal import Decimal
 from pathlib import Path
 
@@ -10,7 +10,7 @@ class ProjectModel:
     def __init__(self):
         self.templates_path = Path("budget_planner", "templates")
 
-        self.initiate_template_directory()
+        self.initiate_templates_directory()
 
         # initiate template dict
         self.template_data = {}
@@ -22,83 +22,140 @@ class ProjectModel:
         template with an error or create new default / empty template if no previous template was loaded.
         """
 
-        self.template_data = {
-            # list of dictionaries with name / hourly_pay / hours
-            'income_categories': [
-                {
-                    'name': 'Main',
-                    'hourly_pay': Decimal('15.00'),
-                    'hours': Decimal('120.00'),
-                    'tax_rate': Decimal('0.2')
-                },
-                {
-                    'name': 'Other',
-                    'hourly_pay': Decimal('12.00'),
-                    'hours': Decimal('10.00'),
-                    'tax_rate': Decimal('0.15')
-                }
-            ],
-            # list of dictionaries with category name and category budget
-            'expense_categories': [
-                {
-                    'category': 'Food',
-                    'budget': Decimal('120.00'),
-                },
-                {
-                    'category': 'Miscellaneous',
-                    'budget': Decimal('0.00'),
-                }
-            ],
-            # transaction list contains dictionaries with date / location / category / payment / deposit
-            'transaction_list': [
-                {
-                    'date': '1970-01-01',
-                    'location': 'Home',
-                    'category': 'Miscelaneous',
-                    'payment': Decimal('100.00'),
-                    'deposit': Decimal('0.00')
-                },
-                {
-                    'date': '1970-01-01',
-                    'location': 'Home',
-                    'category': 'Miscellaneous',
-                    'payment': Decimal('100.00'),
-                    'deposit': Decimal('0.00')
-                },
-                {
-                    'date': '1970-01-01',
-                    'location': 'Main',
-                    'category': 'Income',
-                    'payment': Decimal('100.00'),
-                    'deposit': Decimal('900.00')
-                },
-                {
-                    'date': '1970-01-01',
-                    'location': 'Home',
-                    'category': 'Food',
-                    'payment': Decimal('50.00'),
-                    'deposit': Decimal('0.00')
-                }
-            ]
-        }
-        # filepath = Path(self.templates_path, "template.json")
-        return self.template_data
+        template = self.load_active_template()
 
-    def initiate_template_directory(self):
-        """Ensures template directory exists. If not it creates a new directory."""
+        if template:
+            self.template_data = template
+        else:  # use default template
+            self.template_data = {
+                # list of dictionaries with name / hourly_pay / hours
+                'income_categories': [
+                    {
+                        'name': 'Main',
+                        'hourly_pay': Decimal('15.00'),
+                        'hours': Decimal('120.00'),
+                        'tax_rate': Decimal('0.2')
+                    },
+                    {
+                        'name': 'Other',
+                        'hourly_pay': Decimal('12.00'),
+                        'hours': Decimal('10.00'),
+                        'tax_rate': Decimal('0.15')
+                    }
+                ],
+                # list of dictionaries with category name and category budget
+                'expense_categories': [
+                    {
+                        'name': 'Food',
+                        'budget': Decimal('120.00'),
+                    },
+                    {
+                        'name': 'Miscellaneous',
+                        'budget': Decimal('0.00'),
+                    }
+                ],
+                # transaction list contains dictionaries with date / location / category / payment / deposit
+                'transactions': [
+                    {
+                        'date': '1970-01-01',
+                        'merchant': 'Home',
+                        'category': 'Miscelaneous',
+                        'outlay': Decimal('100.00'),
+                        'inflow': Decimal('0.00')
+                    },
+                    {
+                        'date': '1970-01-01',
+                        'merchant': 'Home',
+                        'category': 'Miscellaneous',
+                        'outlay': Decimal('100.00'),
+                        'inflow': Decimal('0.00')
+                    },
+                    {
+                        'date': '1970-01-01',
+                        'merchant': 'Main',
+                        'category': 'Income',
+                        'outlay': Decimal('100.00'),
+                        'inflow': Decimal('900.00')
+                    },
+                    {
+                        'date': '1970-01-01',
+                        'merchant': 'Home',
+                        'category': 'Food',
+                        'outlay': Decimal('50.00'),
+                        'inflow': Decimal('0.00')
+                    }
+                ]
+            }
+
+    def initiate_templates_directory(self):
+        """Ensures templates directory exists. If not it creates a new directory."""
 
         try:
             os.mkdir(self.templates_path)
         except FileExistsError:
             pass
 
+    def initiate_default_template_directory(self):
+        """Ensures default template directory exists. If not it creates a new directory."""
+
+        try:
+            os.mkdir(Path(self.templates_path, "default_template"))
+        except FileExistsError:
+            pass
+
     def save_template_as(self):
         """Save current budget as a template."""
 
-        # note: this version needs to add feature to name template
-        filepath = Path(self.templates_path, "template.json")
-        data = {'hello': '5'}
-        self.initiate_template_directory()
-        with open(filepath, mode='w') as json_file:
-            json.dump(data, json_file)
-        # print(template_name)
+        income_df = pd.DataFrame(self.template_data['income_categories'])
+        expense_df = pd.DataFrame(self.template_data['expense_categories'])
+        transaction_df = pd.DataFrame(self.template_data['transactions'])
+
+        self.initiate_templates_directory()
+        self.initiate_default_template_directory()
+        income_filepath = Path(self.templates_path, "default_template", "income.csv")
+        expense_filepath = Path(self.templates_path, "default_template", "expense.csv")
+        transaction_filepath = Path(self.templates_path, "default_template", "transaction.csv")
+        income_df.to_csv(income_filepath, index=False)
+        expense_df.to_csv(expense_filepath, index=False)
+        transaction_df.to_csv(transaction_filepath, index=False)
+
+    def load_active_template(self):
+        """Load currently active budget template"""
+
+        income_filepath = Path(self.templates_path, "default_template", "income.csv")
+        expense_filepath = Path(self.templates_path, "default_template", "expense.csv")
+        transaction_filepath = Path(self.templates_path, "default_template", "transaction.csv")
+
+        self.initiate_templates_directory()
+        self.initiate_default_template_directory()
+        try:
+            income_df = pd.read_csv(income_filepath, index_col=False,
+                                    dtype={"name": str},
+                                    converters={"hourly_pay": Decimal, "hours": Decimal, "tax_rate": Decimal})
+        except FileNotFoundError:
+            return ''
+        income_lod = income_df.to_dict('records')  # list of dictionaries
+        try:
+            expense_df = pd.read_csv(expense_filepath, index_col=False,
+                                     dtype={"name": str},
+                                     converters={"budget": Decimal})
+        except FileNotFoundError:
+            return ''
+        expense_lod = expense_df.to_dict('records')  # list of dictionaries
+        try:
+            transaction_df = pd.read_csv(transaction_filepath, index_col=False,
+                                         dtype={"date": str, "merchant": str, "category": str},
+                                         converters={"outlay": Decimal, "inflow": Decimal})
+        except FileNotFoundError:
+            return ''
+        transaction_lod = transaction_df.to_dict('records')  # list of dictionaries
+
+        return_file = {
+            "income_categories": income_lod,
+            "expense_categories": expense_lod,
+            "transactions": transaction_lod}
+
+        print('this should only run once')
+
+        return return_file
+

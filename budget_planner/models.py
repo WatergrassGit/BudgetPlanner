@@ -22,10 +22,13 @@ class ProjectModel:
 
         template = self.load_active_template()
 
+        self.template_data['type'] = 'template'
+        self.template_data['name'] = 'Template'
+
         if template:
-            self.template_data = template
+            self.template_data['template'] = template
         else:  # use default template
-            self.template_data = {
+            template = {
                 # list of dictionaries with name / hourly_pay / hours
                 'income_categories': [
                     {
@@ -84,6 +87,7 @@ class ProjectModel:
                     }
                 ]
             }
+            self.template_data['template'] = template
 
     def initiate_templates_directory(self):
         """Ensures templates directory exists. If not it creates a new directory."""
@@ -110,7 +114,7 @@ class ProjectModel:
         data_groups = ['income_categories', 'expense_categories', 'transactions']
         file_names = ['income.csv', 'expense.csv', 'transaction.csv']
         for i in range(3):
-            df = pd.DataFrame(self.template_data[data_groups[i]])
+            df = pd.DataFrame(self.template_data['template'][data_groups[i]])
             filepath = Path(self.templates_path, 'default_template', file_names[i])
             df.to_csv(filepath, index=False)
 

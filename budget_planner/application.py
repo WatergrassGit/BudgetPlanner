@@ -18,6 +18,8 @@ class Application(tk.Tk):
             "save_template_as": self.save_template_as,
             "add_transaction": self.add_transaction,
             "add_category": self.add_category,
+            "create_budget": self.create_budget,
+            "update_frames": self.update_frames,
         }
 
         # set up project model
@@ -50,3 +52,9 @@ class Application(tk.Tk):
     def add_transaction(self):
         """Used to call add_transaction from BudgetView"""
         self.budget_view.add_transaction()
+
+    def create_budget(self):
+        v.CreateBudget(self, self.callbacks)
+
+    def update_frames(self):
+        self.budget_view.update_frames()

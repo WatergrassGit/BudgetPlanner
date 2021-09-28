@@ -127,7 +127,11 @@ class BudgetView(ttk.Frame):
         )
 
         # initiate data containers for view
-        self.template_data = master.data_model.template_data  # not a copy
+        if master.data_model.template_data['type'] == 'template':
+            self.view_data = master.data_model.template_data['template']  # not a copy
+        if master.data_model.template_data['type'] == 'budget':
+            newest_budget = master.data_model.template_data['order'][-1]
+            self.view_data = master.data_model.template_data[newest_budget]
 
         # fill BudgetView with content
         self.category_column_names = ('#0', 'category', 'budget', 'actual')
@@ -140,7 +144,7 @@ class BudgetView(ttk.Frame):
         self.editable_transaction_column_datatypes = [str, str, str, Decimal, Decimal]
         self.transaction_column_widths = (0, 80, 160, 160, 80, 80, 80)
 
-        self._update_frames()
+        self.update_frames()
 
         # add styles
         self.styles = ttk.Style()
@@ -157,7 +161,7 @@ class BudgetView(ttk.Frame):
                               width=self.canvas_width,
                               height=self.canvas_height)
 
-    def _update_frames(self):
+    def update_frames(self):
         """Method which updates BudgetView."""
 
         self.middle_tv_header.delete(*self.middle_tv_header.get_children())
@@ -202,9 +206,9 @@ class BudgetView(ttk.Frame):
         column_dictionary = dict(zip(column_names, column_widths))
 
         # set new names for data in template_data
-        income_categories = self.template_data['income_categories']
-        expense_categories = self.template_data['expense_categories']
-        transactions = self.template_data['transactions']
+        income_categories = self.view_data['income_categories']
+        expense_categories = self.view_data['expense_categories']
+        transactions = self.view_data['transactions']
 
         # add content to income treeview
         # add the header income treeview
@@ -401,7 +405,7 @@ class BudgetView(ttk.Frame):
         column_dictionary = dict(zip(column_names, column_widths))
 
         # set new names for data in template_data
-        jobs = self.template_data['income_categories']
+        jobs = self.view_data['income_categories']
 
         # add content to middle treeview header
         self.middle_tv_header.config(columns=column_names, selectmode='none', height=1)
@@ -454,7 +458,7 @@ class BudgetView(ttk.Frame):
         column_dictionary = dict(zip(column_names, column_widths))
 
         # set new name(s) for data in template_data
-        transactions = self.template_data['transactions']
+        transactions = self.view_data['transactions']
 
         # add content to transaction treeview header
         self.transaction_tv_header.config(columns=column_names[1:], selectmode='none', height=1)
@@ -542,7 +546,7 @@ class BudgetView(ttk.Frame):
 
         row = self.expense_tv.focus()  # get treeview row
         if row:  # runs only if a row is selected
-            defaults = self.template_data['expense_categories'][int(row)]  # get data from selected treeview row
+            defaults = self.view_data['expense_categories'][int(row)]  # get data from selected treeview row
             defaults = [defaults[d] for d in self.editable_category_column_names]
             self._modify_category_window(
                 call="edit",
@@ -562,12 +566,12 @@ class BudgetView(ttk.Frame):
         row = self.expense_tv.focus()
         if row:
             try:  # only works if
-                del self.template_data['expense_categories'][int(row)]  # remove selected treeview row
+                del self.view_data['expense_categories'][int(row)]  # remove selected treeview row
             except IndexError:
                 # IndexError can occur if we select a category not created by user
                 pass
             finally:
-                self._update_frames()
+                self.update_frames()
 
     def _modify_category_window(self, call, title, entry_defaults, button_text, row=0):
         """
@@ -594,12 +598,12 @@ class BudgetView(ttk.Frame):
 
             new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
             if call == "add":
-                self.template_data['expense_categories'].append(new_entry)
+                self.view_data['expense_categories'].append(new_entry)
             elif call == "insert":
-                self.template_data['expense_categories'].insert(int(row), new_entry)
+                self.view_data['expense_categories'].insert(int(row), new_entry)
             elif call == "edit":
-                self.template_data['expense_categories'][int(row)] = new_entry
-            self._update_frames()
+                self.view_data['expense_categories'][int(row)] = new_entry
+            self.update_frames()
 
         i = 0
         for i, name in enumerate(entry_names):
@@ -655,7 +659,7 @@ class BudgetView(ttk.Frame):
 
         row = self.transaction_tv.focus()  # get treeview row
         if row:  # runs only if a row is selected
-            defaults = self.template_data['transactions'][int(row)]  # get data from selected treeview row
+            defaults = self.view_data['transactions'][int(row)]  # get data from selected treeview row
             defaults = [defaults[d] for d in self.editable_transaction_column_names]
             self._modify_transactions_window(
                 call="edit",
@@ -670,8 +674,8 @@ class BudgetView(ttk.Frame):
 
         row = self.transaction_tv.focus()
         if row:
-            del self.template_data['transactions'][int(row)]  # remove selected treeview row
-            self._update_frames()
+            del self.view_data['transactions'][int(row)]  # remove selected treeview row
+            self.update_frames()
 
     def _modify_transactions_window(self, call, title, entry_defaults, button_text, row=0):
         """
@@ -698,12 +702,12 @@ class BudgetView(ttk.Frame):
 
             new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
             if call == "add":
-                self.template_data['transactions'].append(new_entry)
+                self.view_data['transactions'].append(new_entry)
             elif call == "insert":
-                self.template_data['transactions'].insert(int(row), new_entry)
+                self.view_data['transactions'].insert(int(row), new_entry)
             elif call == "edit":
-                self.template_data['transactions'][int(row)] = new_entry
-            self._update_frames()
+                self.view_data['transactions'][int(row)] = new_entry
+            self.update_frames()
 
         i = 0
         for i, name in enumerate(entry_names):
@@ -736,3 +740,52 @@ class BudgetView(ttk.Frame):
 
         self.transaction_tv_header.configure(style="mystyle.Treeview")
         self.transaction_tv.configure(style="mystyle.Treeview")
+
+
+class CreateBudget(tk.Toplevel):
+    """Class which has pop-up window with options for user to select when creating a new Budget."""
+
+    def __init__(self, master, callbacks, *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+        self.callbacks = callbacks
+        self.master = master
+
+        self.wm_title("Create New Budget")
+
+        text_label = ttk.Label(self, text="Budget Name")
+        self.budget_name = ttk.Entry(self)
+        submit_button = ttk.Button(self, text="Create", command=self.create_new_budget)
+
+        text_label.grid(column=0, row=0)
+        self.budget_name.grid(column=1, row=0)
+        submit_button.grid(column=2, row=0)
+
+        self.new_budget = {}
+
+    def create_new_budget(self):
+        """Sets defaults for a new budget and then calls method to reset BudgetView with new budget."""
+
+        first_budget = "origin"
+
+        self.new_budget["type"] = "budget"
+        self.new_budget["name"] = self.budget_name.get()
+        self.new_budget["order"] = [first_budget]
+        self.new_budget[first_budget] = {
+            'income_categories': [],
+            'expense_categories': [],
+            'transactions': [],
+        }
+
+        self._initiate_new_budget()
+
+    def _initiate_new_budget(self):
+        """Resets BudgetView with new budget."""
+
+        self.master.data_model.template_data = self.new_budget
+
+        newest_budget = self.new_budget['order'][-1]
+        self.view_data = self.new_budget[newest_budget]
+        self.master.budget_view.view_data = self.new_budget[newest_budget]
+        self.callbacks['update_frames']()
+
+

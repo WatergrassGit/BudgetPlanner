@@ -46,6 +46,12 @@ class BudgetView(ttk.Frame):
         middle_label = ttk.Label(middle_frame, text="Expected Job Income")
         self.middle_tv_header = ttk.Treeview(middle_frame, show='tree')
         self.middle_tv = ttk.Treeview(middle_frame, show='tree')
+        self.job_popup_menu = tk.Menu(self.expense_tv)
+        self.job_popup_menu.add_command(label="Add Job...", command=self.add_job)
+        self.job_popup_menu.add_command(label="Insert Job...", command=self.insert_job)
+        self.job_popup_menu.add_command(label="Edit Job...", command=self.edit_job)
+        self.job_popup_menu.add_separator()
+        self.job_popup_menu.add_command(label="Remove Job", command=self.delete_job)
 
         # content for transaction frame
         transaction_label = ttk.Label(transaction_frame, text="Transactions")
@@ -141,6 +147,11 @@ class BudgetView(ttk.Frame):
         self.editable_category_column_datatypes = [str, Decimal]
         self.category_column_widths = (0, 160, 80, 80)
 
+        self.job_column_names = ('#0', 'name', 'hourly_pay', 'hours', 'tax_rate', 'wages')
+        self.editable_job_column_names = self.job_column_names[1:5]
+        self.editable_job_column_datatypes = [str, Decimal, Decimal, Decimal]
+        self.job_column_widths = (0, 80, 80, 50, 70, 60)
+
         self.transaction_column_names = ('#0', 'date', 'merchant', 'category', 'outlay', 'inflow', 'net')
         self.editable_transaction_column_names = self.transaction_column_names[1:6]
         self.editable_transaction_column_datatypes = [str, str, str, Decimal, Decimal]
@@ -155,6 +166,7 @@ class BudgetView(ttk.Frame):
         # set up events
         scrollable_frame.bind("<Configure>", self.get_canvas_size)
         self.expense_tv.bind("<Button-3>", self.call_category_popup_menu)
+        self.middle_tv.bind("<Button-3>", self.call_job_popup_menu)
         self.transaction_tv.bind("<Button-3>", self.call_transaction_popup_menu)
 
     def get_canvas_size(self, *args):
@@ -413,31 +425,30 @@ class BudgetView(ttk.Frame):
         """Function to add middle frame with content. Determines which data to load."""
 
         # set up general variables
-        column_names = ('job', 'rate', 'hours', 'tax_rate', 'wages')
-        column_widths = (80, 80, 50, 70, 60)
+        column_names = self.job_column_names
+        column_widths = self.job_column_widths
+
         column_dictionary = dict(zip(column_names, column_widths))
 
         # set new names for data in template_data
         jobs = self.view_data['income_categories']
 
         # add content to middle treeview header
-        self.middle_tv_header.config(columns=column_names, selectmode='none', height=1)
-        self.middle_tv_header.column('#0', width=0, stretch='NO')
+        self.middle_tv_header.config(columns=column_names[1:], selectmode='none', height=1)
         for k, v in column_dictionary.items():
             self.middle_tv_header.column(k, width=v, stretch='NO')
 
         self.middle_tv_header.insert(
             parent='', index=0, iid=0,
-            value=('Job', 'Hourly Pay', 'Hours', 'Tax Rate', 'Pay'),
+            value=tuple(name.title() for name in column_names[1:]),
             tags=('header',)
         )
         self.middle_tv_header.tag_configure("header", foreground="black", background="#A5A5A5")
 
         # add content to middle treeview
-        self.middle_tv.config(columns=column_names, selectmode='browse', height=20)
-        self.middle_tv.column('#0', width=0, stretch='NO')
+        self.middle_tv.config(columns=column_names[1:], selectmode='browse', height=20)
         for k, v in column_dictionary.items():
-            self.middle_tv.column(k, width=v)
+            self.middle_tv.column(k, width=v, stretch='NO')
 
         for index, value in enumerate(jobs):
             if index % 2 == 0:
@@ -730,6 +741,110 @@ class BudgetView(ttk.Frame):
             entries[name].grid(column=i, row=1)
         modify_transaction_button = ttk.Button(modify_transaction_window, text=button_text, command=call_update_frames)
         modify_transaction_button.grid(column=i, row=2, sticky='e')
+
+    def call_job_popup_menu(self, event):
+        """Method to create a small popup menu for the middle treeview"""
+
+        try:
+            self.job_popup_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.job_popup_menu.grab_release()
+
+    def add_job(self):
+        """Add new job to middle treeview by calling private method."""
+
+        self._modify_jobs_window(
+            call="add",
+            title="New Job",
+            entry_defaults=["Job1", Decimal(0), Decimal(0), Decimal(0)],
+            button_text="Add"
+        )
+
+    def insert_job(self):
+        """
+        Method which checks to see if we have a selected row in the middle treeview.
+
+        If no row is selected this function quits. If a row is selected user is allowed to add
+        a new job above the selected row by calling a private method.
+        """
+
+        row = self.middle_tv.focus()  # get middle treeview selected row number
+        if row:  # doesn't run if empty string is returned
+            self._modify_jobs_window(
+                call="insert",
+                title="Insert Job",
+                entry_defaults=["Job2", Decimal(0), Decimal(0), Decimal(0)],
+                button_text="Insert",
+                row=row
+            )
+
+    def edit_job(self):
+        """
+        Method which allows user to update selected job information by calling a private method.
+
+        If no row is selected, nothing happens.
+        """
+
+        row = self.middle_tv.focus()  # get treeview row
+        if row:  # runs only if a row is selected
+            defaults = self.view_data['income_categories'][int(row)]  # get data from selected treeview row
+            defaults = [defaults[d] for d in self.editable_job_column_names]
+            self._modify_jobs_window(
+                call="edit",
+                title="Edit Job",
+                entry_defaults=defaults,
+                button_text="Edit",
+                row=row
+            )
+
+    def delete_job(self):
+        """Deletes selected row from income categories and updates BudgetView. If no row selected, nothing happens."""
+
+        row = self.middle_tv.focus()
+        if row:
+            del self.view_data['income_categories'][int(row)]  # remove selected treeview row
+            self.update_frames()
+
+    def _modify_jobs_window(self, call, title, entry_defaults, button_text, row=0):
+        """
+        Method used to add, edit or insert a row to the middle treeview.
+
+        This is done by creating entry widgets that the user enters data into and then submits.
+        This is a private method called by methods which determine whether this method is
+        used to add, edit or insert data.
+        """
+
+        modify_window = tk.Toplevel(self)
+        modify_window.wm_title(title)
+
+        entry_names = self.editable_job_column_names
+        function_calls = self.editable_job_column_datatypes
+
+        entries = {}  # holds data submitted
+
+        def call_update_frames():
+            """
+            Helper function which extracts entry widgets' values. It then adds, inserts, or edits a
+            job to the active job list. It finally refreshes BudgetView.
+            """
+
+            new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
+            if call == "add":
+                self.view_data['income_categories'].append(new_entry)
+            elif call == "insert":
+                self.view_data['income_categories'].insert(int(row), new_entry)
+            elif call == "edit":
+                self.view_data['income_categories'][int(row)] = new_entry
+            self.update_frames()
+
+        i = 0
+        for i, name in enumerate(entry_names):
+            ttk.Label(modify_window, text=name.title()).grid(column=i, row=0)
+            entries[name] = ttk.Entry(modify_window)
+            entries[name].insert(0, entry_defaults[i])
+            entries[name].grid(column=i, row=1)
+        modify_button = ttk.Button(modify_window, text=button_text, command=call_update_frames)
+        modify_button.grid(column=i, row=2, sticky='e')
 
     def get_previous_budget(self):
         if self.master.data_model.template_data['type'] == 'template':

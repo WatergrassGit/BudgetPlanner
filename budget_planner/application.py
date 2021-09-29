@@ -20,6 +20,7 @@ class Application(tk.Tk):
             "add_category": self.add_category,
             "create_budget": self.create_budget,
             "update_frames": self.update_frames,
+            "add_job": self.add_job,
         }
 
         # set up project model
@@ -48,6 +49,10 @@ class Application(tk.Tk):
     def add_category(self):
         """Used to call add_category from BudgetView"""
         self.budget_view.add_category()
+
+    def add_job(self):
+        """Used to call add_job from BudgetView"""
+        self.budget_view.add_job()
 
     def add_transaction(self):
         """Used to call add_transaction from BudgetView"""

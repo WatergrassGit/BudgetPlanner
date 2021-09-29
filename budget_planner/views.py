@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
 from decimal import Decimal
 from datetime import date
 from .widgets import AutoScrollbar
@@ -11,6 +12,7 @@ class BudgetView(ttk.Frame):
     def __init__(self, master, callbacks, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
         self.callbacks = callbacks
+        self.master = master
 
         # set up widgets for primary layer
         self.canvas = tk.Canvas(self)
@@ -21,7 +23,7 @@ class BudgetView(ttk.Frame):
         scrollable_frame = ttk.Frame(self)
 
         # set up widgets for scrollable frame
-        title_label = ttk.Label(scrollable_frame, text="Title: Current Budget")
+        self.title_label = ttk.Label(scrollable_frame, text="Title: Current Budget")
         category_frame = ttk.Frame(scrollable_frame)
         middle_frame = ttk.Frame(scrollable_frame)
         transaction_frame = ttk.Frame(scrollable_frame)
@@ -60,12 +62,12 @@ class BudgetView(ttk.Frame):
         previous_button = ttk.Button(
             bottom_frame,
             text="Previous",
-            command=lambda: print("Not yet available...")
+            command=self.get_previous_budget
         )
         next_button = ttk.Button(
             bottom_frame,
             text="Next",
-            command=lambda: self.get_canvas_size()
+            command=self.get_next_budget
         )
         self.h_scroll = ttk.Scrollbar(bottom_frame, orient=tk.HORIZONTAL)
 
@@ -75,7 +77,7 @@ class BudgetView(ttk.Frame):
         bottom_frame.grid(column=0, row=1, sticky='nwes')
 
         # grid scrollable frame widgets
-        title_label.grid(column=0, row=0, columnspan=3, sticky=(tk.W + tk.E))
+        self.title_label.grid(column=0, row=0, columnspan=3, sticky=(tk.W + tk.E))
         category_frame.grid(column=0, row=1, sticky='nwes')
         middle_frame.grid(column=1, row=1, padx=20, sticky='nwes')
         transaction_frame.grid(column=2, row=1, sticky='nwes')
@@ -127,14 +129,14 @@ class BudgetView(ttk.Frame):
         )
 
         # initiate data containers for view
-        if master.data_model.template_data['type'] == 'template':
+        if self.master.data_model.template_data['type'] == 'template':
             self.view_data = master.data_model.template_data['template']  # not a copy
-        if master.data_model.template_data['type'] == 'budget':
+        if self.master.data_model.template_data['type'] == 'budget':
             newest_budget = master.data_model.template_data['order'][-1]
             self.view_data = master.data_model.template_data[newest_budget]
 
         # fill BudgetView with content
-        self.category_column_names = ('#0', 'category', 'budget', 'actual')
+        self.category_column_names = ('#0', 'name', 'budget', 'actual')
         self.editable_category_column_names = self.category_column_names[1:3]
         self.editable_category_column_datatypes = [str, Decimal]
         self.category_column_widths = (0, 160, 80, 80)
@@ -197,6 +199,17 @@ class BudgetView(ttk.Frame):
         self.expense_tv.grid()
         self.net_income_tv.grid(pady=(20, 0))
         self.add_content_category_frame()  # repopulate
+
+        self._update_title()  # update current budget title
+
+    def _update_title(self):
+        if self.master.data_model.template_data["type"] == "budget":
+            name = self.master.data_model.template_data["name"]
+            sub_name = self.master.data_model.template_data["current_budget"]
+
+            self.title_label.configure(text=name + ": " + sub_name)
+        else:
+            self.title_label.configure(text="Template")
 
     def add_content_category_frame(self):
         """Function to add category frame with content. Determines which data to load."""
@@ -718,6 +731,78 @@ class BudgetView(ttk.Frame):
         modify_transaction_button = ttk.Button(modify_transaction_window, text=button_text, command=call_update_frames)
         modify_transaction_button.grid(column=i, row=2, sticky='e')
 
+    def get_previous_budget(self):
+        if self.master.data_model.template_data['type'] == 'template':
+            print("This is a template.")
+            return
+        current_budget = self.master.data_model.template_data['current_budget']
+        placement = self.master.data_model.template_data['order'].index(current_budget)
+        if placement > 0:
+            previous_budget = self.master.data_model.template_data['order'][placement - 1]
+        else:
+            print("There are no earlier budgets!")
+            return
+        self.master.data_model.template_data["current_budget"] = previous_budget
+        self.view_data = self.master.data_model.template_data[previous_budget]
+        self.update_frames()
+
+    def get_next_budget(self):
+        if self.master.data_model.template_data['type'] == 'template':
+            print("This is a template.")
+            return
+        current_budget = self.master.data_model.template_data['current_budget']
+        placement = self.master.data_model.template_data['order'].index(current_budget)
+        try:
+            next_budget = self.master.data_model.template_data['order'][placement + 1]
+            self.master.data_model.template_data["current_budget"] = next_budget
+            self.view_data = self.master.data_model.template_data[next_budget]
+            self.update_frames()
+        except IndexError:
+            create_next_budget = messagebox.askyesno(
+                title="Add Next Budget",
+                message="There is no next budget!",
+                detail="Create it?"
+            )
+            if create_next_budget:
+                next_budget = current_budget
+                add_next_budget_window = tk.Toplevel(self)
+                add_next_budget_window.wm_title("Add Next Budget")
+
+                def gather_info():
+                    nonlocal next_budget
+
+                    next_budget = next_name.get()
+
+                    if next_budget in self.master.data_model.template_data["order"]:
+                        messagebox.showerror(
+                            title="Name Error",
+                            message="Budget name already in use!",
+                            detail="Choose another name."
+                        )
+                    else:
+                        self.master.data_model.template_data["current_budget"] = next_budget
+                        self.master.data_model.template_data["order"].append(next_budget)
+                        self.master.data_model.template_data[next_budget] = {
+                            'income_categories': [],
+                            'expense_categories': [],
+                            'transactions': [],
+                        }
+                        self.view_data = self.master.data_model.template_data[next_budget]
+                        self.update_frames()
+                        add_next_budget_window.destroy()
+                        add_next_budget_window.update()
+
+                label = ttk.Label(add_next_budget_window, text="Next Budget Name")
+                next_name = ttk.Entry(add_next_budget_window)
+                next_name_submit = ttk.Button(add_next_budget_window, text="Submit", command=gather_info)
+
+                label.grid(column=0)
+                next_name.grid(column=1)
+                next_name_submit.grid(column=2)
+
+            else:
+                return
+
     def set_styles(self):
         #self.styles.theme_use('clam')
         self.styles.configure('mystyle.Treeview', highlightthickness=0, bd=0, font=('Calibri', 11))
@@ -769,6 +854,7 @@ class CreateBudget(tk.Toplevel):
 
         self.new_budget["type"] = "budget"
         self.new_budget["name"] = self.budget_name.get()
+        self.new_budget["current_budget"] = first_budget
         self.new_budget["order"] = [first_budget]
         self.new_budget[first_budget] = {
             'income_categories': [],

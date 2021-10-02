@@ -22,7 +22,7 @@ class MainMenu(tk.Menu):
         self.menu_file.add_separator()
         self.menu_file.add_command(label="Save Template As...", command=self.callbacks["save_template_as"])
         self.menu_file.add_command(label="Save Budget", command=lambda: print("Coming soon..."))
-        self.menu_file.add_command(label="Save Budget As...", command=lambda: print("Coming soon..."))
+        self.menu_file.add_command(label="Save Budget Group As...", command=self.callbacks["save_budget_group_as"])
         self.menu_file.add_separator()
         self.menu_file.add_command(label="Print...", command=lambda: print("Coming soon..."))
         self.menu_file.add_separator()

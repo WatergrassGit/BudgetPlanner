@@ -21,10 +21,12 @@ class Application(tk.Tk):
             "create_budget": self.create_budget,
             "update_frames": self.update_frames,
             "add_job": self.add_job,
+            "save_budget_group_as": self.save_budget_group_as,
+            "save_budget_group": self.save_budget_group,
         }
 
         # set up project model
-        self.data_model = ProjectModel()
+        self.data_model = ProjectModel(self, self.callbacks)
 
         # set up menu
         self.option_add('*tearOff', False)
@@ -63,3 +65,11 @@ class Application(tk.Tk):
 
     def update_frames(self):
         self.budget_view.update_frames()
+
+    def save_budget_group_as(self):
+        """Opens dialog to select name and location to save budget group."""
+        v.SaveBudget(self, self.callbacks)
+
+    def save_budget_group(self, filepath):
+        """Sends filepath to model to save"""
+        self.data_model.save_budget_group(filepath)

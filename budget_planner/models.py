@@ -1,4 +1,5 @@
 import os
+import json
 import pandas as pd
 from decimal import Decimal
 from pathlib import Path
@@ -7,8 +8,13 @@ from pathlib import Path
 class ProjectModel:
     """A class for interacting with external files."""
 
-    def __init__(self):
+    def __init__(self, master, callbacks):
+        self.master = master
+        self.callbacks = callbacks
+
         self.templates_path = Path("budget_planner", "templates")
+        self.budgets_path = Path("budget_planner", "budgets")
+        self.budget_data_path = Path("budget_planner", "budget_data")
 
         # initiate template dictionary and load data from file or default
         self.template_data = {}
@@ -105,6 +111,22 @@ class ProjectModel:
         except FileExistsError:
             pass
 
+    def initiate_budgets_directory(self):
+        """Ensures budgets directory exists. If not it creates a new directory."""
+
+        try:
+            os.mkdir(self.budgets_path)
+        except FileExistsError:
+            pass
+
+    def initiate_budget_data_directory(self):
+        """Ensures budget_data directory exists. If not it creates a new directory."""
+
+        try:
+            os.mkdir(self.budget_data_path)
+        except FileExistsError:
+            pass
+
     def save_template_as(self):
         """Save current budget as a template."""
 
@@ -162,3 +184,44 @@ class ProjectModel:
 
         return return_file
 
+    def save_budget_group(self, filepath):
+        """Allows user to save a budget grouping to a directory."""
+
+        if self.template_data['type'] == 'template':
+            print("This is not a budget group. Use Save Template instead.")
+            return
+
+        self.initiate_budget_data_directory()
+
+        # save path link
+        with open(filepath, mode='w') as json_file:
+            json.dump({'key': str(Path(self.budget_data_path, Path(filepath).name))}, json_file)
+
+        # save config data
+        order_lod = [{v.replace(" ", "_"): v} for v in self.template_data['order']]
+        config_file = {
+            'name': self.template_data['name'],
+            'current_budget': self.template_data['current_budget'],
+            'order': order_lod,
+        }
+
+        try:
+            os.mkdir(Path(self.budget_data_path, Path(filepath).stem))
+        except FileExistsError:
+            pass
+
+        with open(Path(self.budget_data_path, Path(filepath).stem, "config.json"), mode='w') as json_file:
+            json.dump(config_file, json_file)
+
+        # save data fields
+        data_groups = ['income_categories', 'expense_categories', 'transactions']
+        file_names = ['income.csv', 'expense.csv', 'transaction.csv']
+        for d in order_lod:
+            try:
+                os.mkdir(Path(self.budget_data_path, Path(filepath).stem, list(d.keys())[0]))
+            except FileExistsError:
+                pass
+            for i in range(3):
+                df = pd.DataFrame(self.template_data[list(d.values())[0]][data_groups[i]])
+                fp = Path(Path(self.budget_data_path, Path(filepath).stem), list(d.keys())[0], file_names[i])
+                df.to_csv(fp, index=False)

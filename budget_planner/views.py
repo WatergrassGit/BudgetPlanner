@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+from tkinter import filedialog
 from decimal import Decimal
 from datetime import date
 from .widgets import AutoScrollbar
@@ -440,7 +441,7 @@ class BudgetView(ttk.Frame):
 
         self.middle_tv_header.insert(
             parent='', index=0, iid=0,
-            value=tuple(name.title() for name in column_names[1:]),
+            value=('Job', 'Hourly Rate', 'Hours', 'Tax Rate', 'Wages'),
             tags=('header',)
         )
         self.middle_tv_header.tag_configure("header", foreground="black", background="#A5A5A5")
@@ -990,3 +991,35 @@ class CreateBudget(tk.Toplevel):
         self.callbacks['update_frames']()
 
 
+class SaveBudget:
+    """Class which has pop-up window with options for user to save a budget group."""
+
+    def __init__(self, master, callbacks, *args, **kwargs):
+        self.callbacks = callbacks
+        self.master = master
+
+        self.master.data_model.initiate_budgets_directory()
+
+        mask = [("JSON files", "*.json"), ("All files", "*.*")]
+
+        filedir = filedialog.asksaveasfilename(
+            title="Save Budget Group As",
+            initialdir=self.master.data_model.budgets_path,
+            initialfile="new_group.json",
+            filetypes=mask
+        )
+
+        if filedir:
+            self.callbacks["save_budget_group"](filedir)
+
+
+class OverwriteDirectory:
+    """Popup window which"""
+
+    @staticmethod
+    def call_messagebox():
+        return messagebox.askokcancel(
+            title="Directory Exists",
+            message="Selected directory already exists!",
+            detail="Do you want to overwrite?"
+        )

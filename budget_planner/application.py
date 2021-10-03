@@ -90,5 +90,10 @@ class Application(tk.Tk):
     def load_budget_group(self):
         """Not sure yet."""
         lb = v.LoadBudget(self, self.callbacks)
+        success = False
         if lb.filepath:
-            print("call models.py for loading")
+            success = self.data_model.load_budget_group(lb.filepath)
+        if success:
+            current_budget = self.data_model.template_data["current_budget"]
+            self.budget_view.view_data = self.data_model.template_data[current_budget]
+            self.update_frames()

@@ -1,5 +1,6 @@
 import os
 import shutil
+import csv
 import json
 import pandas as pd
 from decimal import Decimal
@@ -190,6 +191,7 @@ class ProjectModel:
             # save config data
             order_lod = [{v.replace(" ", "_"): v} for v in self.template_data['order']]
             config_file = {
+                'type': self.template_data['type'],
                 'name': self.template_data['name'],
                 'current_budget': self.template_data['current_budget'],
                 'order': order_lod,
@@ -217,3 +219,39 @@ class ProjectModel:
             for dir in dirlist:
                 if dir not in [list(d.keys())[0] for d in order_lod]:
                     shutil.rmtree(Path(budget_group_path, dir))
+
+    def load_budget_group(self, filepath):
+        """sdfasdf"""
+
+        csv_file = pd.read_csv(filepath, index_col=False, header=None)
+
+        file_directory = Path(csv_file.iloc[0, 0])
+
+        # step 1: load config.json
+        # abort if file not found or if type is not budget
+        config_path = Path(file_directory, "config.json")
+        with open(config_path, mode='r') as json_file:
+            data = json.load(json_file)
+        if data['type'] == 'budget':
+            print('this is a budget')
+        else:
+            print('this is not a budget')
+            return False  # represents load was unsuccessful
+
+        # step 2: separate keys and values from order
+        order_dirnames = []
+        order_names = []
+        for d in data['order']:
+            order_dirnames.append(list(d.keys())[0])
+            order_names.append(list(d.values())[0])
+        #data['order'] = order_names
+
+        # step 3: load each directory in config.json based on order
+        # if a directory is missing issue a warning
+        for d in data['order']:
+            fp = Path(file_directory, list(d.keys())[0])
+            data[list(d.values())[0]] = self.load_budget_from_directory(fp)
+
+        self.template_data = data
+
+        return True  # represents load was successful

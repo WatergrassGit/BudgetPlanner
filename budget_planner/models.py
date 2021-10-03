@@ -120,47 +120,50 @@ class ProjectModel:
 
     def load_active_template(self):
         """Load currently active budget template"""
+        default_path = Path(self.templates_path, "default_template")
+        return self.load_budget_from_directory(default_path)
 
-        income_filepath = Path(self.templates_path, "default_template", "income.csv")
-        expense_filepath = Path(self.templates_path, "default_template", "expense.csv")
-        transaction_filepath = Path(self.templates_path, "default_template", "transaction.csv")
+    def load_budget_from_directory(self, directory_path):
+        """
+        Load income, expense, and transaction .csv files from given directory and returns a dictionary.
+
+        :argument
+            directory_path (Path): A path pointing to directory to load files from
+        :returns
+            dict: A dictionary containing each .csv file load as a list of dictionaries
+        :exception
+            FileNotFoundError: When loading a missing .csv we initiate an empty dataframe
+            pd.errors.EmptyDataError: When loading an empty .csv file we initiate an empty dataframe
+        """
+
+        filepaths = [
+            Path(directory_path, "income.csv"),
+            Path(directory_path, "expense.csv"),
+            Path(directory_path, "transaction.csv"),
+        ]
+        dtypes = [
+            {"name": str},
+            {"name": str},
+            {"date": str, "merchant": str, "category": str},
+        ]
+        converters = [
+            {"hourly_pay": Decimal, "hours": Decimal, "tax_rate": Decimal},
+            {"budget": Decimal},
+            {"outlay": Decimal, "inflow": Decimal},
+        ]
 
         self.initiate_directory(self.templates_path)
         self.initiate_directory(Path(self.templates_path, "default_template"))
-        try:
-            income_df = pd.read_csv(income_filepath, index_col=False,
-                                    dtype={"name": str},
-                                    converters={"hourly_pay": Decimal, "hours": Decimal, "tax_rate": Decimal})
-        except FileNotFoundError:
-            return ''
-        except pd.errors.EmptyDataError:
-            income_df = pd.DataFrame()
-        income_lod = income_df.to_dict('records')  # list of dictionaries
-        try:
-            expense_df = pd.read_csv(expense_filepath, index_col=False,
-                                     dtype={"name": str},
-                                     converters={"budget": Decimal})
-        except FileNotFoundError:
-            return ''
-        except pd.errors.EmptyDataError:
-            expense_df = pd.DataFrame()
-        expense_lod = expense_df.to_dict('records')  # list of dictionaries
-        try:
-            transaction_df = pd.read_csv(transaction_filepath, index_col=False,
-                                         dtype={"date": str, "merchant": str, "category": str},
-                                         converters={"outlay": Decimal, "inflow": Decimal})
-        except FileNotFoundError:
-            return ''
-        except pd.errors.EmptyDataError:
-            transaction_df = pd.DataFrame()
-        transaction_lod = transaction_df.to_dict('records')  # list of dictionaries
 
-        return_file = {
-            "income_categories": income_lod,
-            "expense_categories": expense_lod,
-            "transactions": transaction_lod}
+        lods = []  # list of a list of dictionaries
+        for i in range(3):
+            try:
+                df = pd.read_csv(filepaths[i], index_col=False, dtype=dtypes[i], converters=converters[i])
+            except (FileNotFoundError, pd.errors.EmptyDataError):
+                df = pd.DataFrame()
+            lods.append(df.to_dict('records'))
 
-        return return_file
+        return {"income_categories": lods[0], "expense_categories": lods[1], "transactions": lods[2]}
 
     def save_budget_group(self, filepath):
         """Allows user to save a budget grouping to a directory."""

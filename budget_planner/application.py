@@ -24,6 +24,7 @@ class Application(tk.Tk):
             "save_budget_group_as": self.save_budget_group_as,
             "save_budget_group": self.save_budget_group,
             "overwrite_budget_group_warning": self.overwrite_budget_group_warning,
+            "load_budget_group": self.load_budget_group,
         }
 
         # set up project model
@@ -85,3 +86,9 @@ class Application(tk.Tk):
         warning_class = v.OverwriteDirectory()
         response = warning_class.call_messagebox(group_name)
         return response
+
+    def load_budget_group(self):
+        """Not sure yet."""
+        lb = v.LoadBudget(self, self.callbacks)
+        if lb.filepath:
+            print("call models.py for loading")

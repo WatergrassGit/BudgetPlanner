@@ -1013,6 +1013,25 @@ class SaveBudget:
             self.callbacks["save_budget_group"](fp)
 
 
+class LoadBudget:
+    """Class which has pop-up window allowing user to select a csvfile pointing to a budget group to load."""
+
+    def __init__(self, master, callbacks, *args, **kwargs):
+        self.callbacks = callbacks
+        self.master = master
+
+        bdp = self.master.data_model.budgets_path  # budgets directory path
+        self.master.data_model.initiate_directory(bdp)
+
+        mask = [("CSV files", "*.csv"), ("All files", "*.*")]
+
+        self.filepath = filedialog.askopenfilename(
+            title="Load Budget Group",
+            initialdir=bdp,
+            filetypes=mask
+        )
+
+
 class OverwriteDirectory:
     """Class containing function which calls a popup window asking if the user wants to overwrite a directory."""
 

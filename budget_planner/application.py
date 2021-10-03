@@ -23,6 +23,7 @@ class Application(tk.Tk):
             "add_job": self.add_job,
             "save_budget_group_as": self.save_budget_group_as,
             "save_budget_group": self.save_budget_group,
+            "overwrite_budget_group_warning": self.overwrite_budget_group_warning,
         }
 
         # set up project model
@@ -73,3 +74,14 @@ class Application(tk.Tk):
     def save_budget_group(self, filepath):
         """Sends filepath to model to save"""
         self.data_model.save_budget_group(filepath)
+
+    @staticmethod
+    def overwrite_budget_group_warning(group_name):
+        """
+        Calls function to ask if user wants to overwrite a budget group directory.
+        Returns user response as True or False.
+        """
+
+        warning_class = v.OverwriteDirectory()
+        response = warning_class.call_messagebox(group_name)
+        return response

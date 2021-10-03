@@ -1000,26 +1000,26 @@ class SaveBudget:
 
         self.master.data_model.initiate_directory(self.master.data_model.budgets_path)
 
-        mask = [("JSON files", "*.json"), ("All files", "*.*")]
+        mask = [("CSV files", "*.csv"), ("All files", "*.*")]
 
-        filedir = filedialog.asksaveasfilename(
+        fp = filedialog.asksaveasfilename(
             title="Save Budget Group As",
             initialdir=self.master.data_model.budgets_path,
-            initialfile="new_group.json",
+            initialfile="new_group.csv",
             filetypes=mask
         )
 
-        if filedir:
-            self.callbacks["save_budget_group"](filedir)
+        if fp:
+            self.callbacks["save_budget_group"](fp)
 
 
 class OverwriteDirectory:
-    """Popup window which"""
+    """Class containing function which calls a popup window asking if the user wants to overwrite a directory."""
 
     @staticmethod
-    def call_messagebox():
+    def call_messagebox(directory_name):
         return messagebox.askokcancel(
             title="Directory Exists",
-            message="Selected directory already exists!",
+            message=f"A directory called {directory_name} already exists!",
             detail="Do you want to overwrite?"
         )

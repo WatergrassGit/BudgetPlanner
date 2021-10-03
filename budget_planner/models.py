@@ -1,4 +1,5 @@
 import os
+import shutil
 import json
 import pandas as pd
 from decimal import Decimal
@@ -164,41 +165,52 @@ class ProjectModel:
     def save_budget_group(self, filepath):
         """Allows user to save a budget grouping to a directory."""
 
+        self.initiate_directory(self.budget_data_path)
+        fn = Path(filepath).stem
         if self.template_data['type'] == 'template':
             print("This is not a budget group. Use Save Template instead.")
             return
 
-        self.initiate_directory(self.budget_data_path)
+        budget_group_path = Path(self.budget_data_path, fn)
 
-        # save path link
-        with open(filepath, mode='w') as json_file:
-            json.dump({'key': str(Path(self.budget_data_path, Path(filepath).name))}, json_file)
-
-        # save config data
-        order_lod = [{v.replace(" ", "_"): v} for v in self.template_data['order']]
-        config_file = {
-            'name': self.template_data['name'],
-            'current_budget': self.template_data['current_budget'],
-            'order': order_lod,
-        }
-
+        overwrite = True
         try:
-            os.mkdir(Path(self.budget_data_path, Path(filepath).stem))
+            os.mkdir(budget_group_path)
         except FileExistsError:
-            pass
+            overwrite = self.callbacks["overwrite_budget_group_warning"](fn)
 
-        with open(Path(self.budget_data_path, Path(filepath).stem, "config.json"), mode='w') as json_file:
-            json.dump(config_file, json_file)
+        if overwrite:
+            # save path link
+            with open(filepath, mode='w') as fp:
+                fp.write(str(budget_group_path))
 
-        # save data fields
-        data_groups = ['income_categories', 'expense_categories', 'transactions']
-        file_names = ['income.csv', 'expense.csv', 'transaction.csv']
-        for d in order_lod:
-            try:
-                os.mkdir(Path(self.budget_data_path, Path(filepath).stem, list(d.keys())[0]))
-            except FileExistsError:
-                pass
-            for i in range(3):
-                df = pd.DataFrame(self.template_data[list(d.values())[0]][data_groups[i]])
-                fp = Path(Path(self.budget_data_path, Path(filepath).stem), list(d.keys())[0], file_names[i])
-                df.to_csv(fp, index=False)
+            # save config data
+            order_lod = [{v.replace(" ", "_"): v} for v in self.template_data['order']]
+            config_file = {
+                'name': self.template_data['name'],
+                'current_budget': self.template_data['current_budget'],
+                'order': order_lod,
+            }
+
+            self.initiate_directory(budget_group_path)
+            config_fp = Path(self.budget_data_path, fn, "config.json")
+            with open(config_fp, mode='w') as json_file:
+                json.dump(config_file, json_file)
+
+            # save data fields
+            data_groups = ['income_categories', 'expense_categories', 'transactions']
+            file_names = ['income.csv', 'expense.csv', 'transaction.csv']
+            for d in order_lod:
+                self.initiate_directory(Path(budget_group_path, list(d.keys())[0]))
+                for i in range(3):
+                    df = pd.DataFrame(self.template_data[list(d.values())[0]][data_groups[i]])
+                    fp = Path(budget_group_path, list(d.keys())[0], file_names[i])
+                    df.to_csv(fp, index=False)
+
+            # this code gets a list of all directories in the budget_group directory for the budget group being saved
+            # it then removed any subdirectories which are no longer represented in the budget group
+            # this could happen as a result of renaming a budget or replacing an entire budget group
+            dirlist = [item for item in os.listdir(budget_group_path) if os.path.isdir(Path(budget_group_path, item))]
+            for dir in dirlist:
+                if dir not in [list(d.keys())[0] for d in order_lod]:
+                    shutil.rmtree(Path(budget_group_path, dir))

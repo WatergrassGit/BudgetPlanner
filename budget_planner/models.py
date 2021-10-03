@@ -95,43 +95,20 @@ class ProjectModel:
             }
             self.template_data['template'] = template
 
-    def initiate_templates_directory(self):
-        """Ensures templates directory exists. If not it creates a new directory."""
+    @staticmethod
+    def initiate_directory(directory):
+        """Ensures given directory exists. If not it creates the directory."""
 
         try:
-            os.mkdir(self.templates_path)
-        except FileExistsError:
-            pass
-
-    def initiate_default_template_directory(self):
-        """Ensures default template directory exists. If not it creates a new directory."""
-
-        try:
-            os.mkdir(Path(self.templates_path, "default_template"))
-        except FileExistsError:
-            pass
-
-    def initiate_budgets_directory(self):
-        """Ensures budgets directory exists. If not it creates a new directory."""
-
-        try:
-            os.mkdir(self.budgets_path)
-        except FileExistsError:
-            pass
-
-    def initiate_budget_data_directory(self):
-        """Ensures budget_data directory exists. If not it creates a new directory."""
-
-        try:
-            os.mkdir(self.budget_data_path)
+            os.mkdir(directory)
         except FileExistsError:
             pass
 
     def save_template_as(self):
         """Save current budget as a template."""
 
-        self.initiate_templates_directory()
-        self.initiate_default_template_directory()
+        self.initiate_directory(self.templates_path)
+        self.initiate_directory(Path(self.templates_path, "default_template"))
 
         data_groups = ['income_categories', 'expense_categories', 'transactions']
         file_names = ['income.csv', 'expense.csv', 'transaction.csv']
@@ -147,8 +124,8 @@ class ProjectModel:
         expense_filepath = Path(self.templates_path, "default_template", "expense.csv")
         transaction_filepath = Path(self.templates_path, "default_template", "transaction.csv")
 
-        self.initiate_templates_directory()
-        self.initiate_default_template_directory()
+        self.initiate_directory(self.templates_path)
+        self.initiate_directory(Path(self.templates_path, "default_template"))
         try:
             income_df = pd.read_csv(income_filepath, index_col=False,
                                     dtype={"name": str},
@@ -191,7 +168,7 @@ class ProjectModel:
             print("This is not a budget group. Use Save Template instead.")
             return
 
-        self.initiate_budget_data_directory()
+        self.initiate_directory(self.budget_data_path)
 
         # save path link
         with open(filepath, mode='w') as json_file:

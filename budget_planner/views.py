@@ -998,7 +998,7 @@ class SaveBudget:
         self.callbacks = callbacks
         self.master = master
 
-        self.master.data_model.initiate_budgets_directory()
+        self.master.data_model.initiate_directory(self.master.data_model.budgets_path)
 
         mask = [("JSON files", "*.json"), ("All files", "*.*")]
 

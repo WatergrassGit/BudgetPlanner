@@ -189,7 +189,7 @@ class ProjectModel:
                 fp.write(str(budget_group_path))
 
             # save config data
-            order_lod = [{v.replace(" ", "_"): v} for v in self.template_data['order']]
+            order_lod = [{"dirname": v.replace(" ", "_"), "name": v} for v in self.template_data['order']]
             config_file = {
                 'type': self.template_data['type'],
                 'name': self.template_data['name'],
@@ -206,10 +206,10 @@ class ProjectModel:
             data_groups = ['income_categories', 'expense_categories', 'transactions']
             file_names = ['income.csv', 'expense.csv', 'transaction.csv']
             for d in order_lod:
-                self.initiate_directory(Path(budget_group_path, list(d.keys())[0]))
+                self.initiate_directory(Path(budget_group_path, d['dirname']))
                 for i in range(3):
-                    df = pd.DataFrame(self.template_data[list(d.values())[0]][data_groups[i]])
-                    fp = Path(budget_group_path, list(d.keys())[0], file_names[i])
+                    df = pd.DataFrame(self.template_data[d['name']][data_groups[i]])
+                    fp = Path(budget_group_path, d['dirname'], file_names[i])
                     df.to_csv(fp, index=False)
 
             # this code gets a list of all directories in the budget_group directory for the budget group being saved
@@ -217,11 +217,26 @@ class ProjectModel:
             # this could happen as a result of renaming a budget or replacing an entire budget group
             dirlist = [item for item in os.listdir(budget_group_path) if os.path.isdir(Path(budget_group_path, item))]
             for dir in dirlist:
-                if dir not in [list(d.keys())[0] for d in order_lod]:
+                if dir not in [d['dirname'] for d in order_lod]:
                     shutil.rmtree(Path(budget_group_path, dir))
 
     def load_budget_group(self, filepath):
-        """sdfasdf"""
+        """
+        Loads a budget group directory into a python dictionary.
+
+        This is done with the following process:
+            * Use argument filepath to open file and get budget group directory location
+            * Load configuration file
+            * Ensure we are loading a budget group
+            * Load each budget in budget group based on configuration file
+            * Overwrite self.template_data with budget group
+            * Return bool indicating if load was successful
+
+        :argument
+            filepath (Path): A path pointing to a file containing budget group directory location
+        :returns
+            bool: Returns a boolean indicating if load as successful
+        """
 
         csv_file = pd.read_csv(filepath, index_col=False, header=None)
 
@@ -238,20 +253,13 @@ class ProjectModel:
             print('this is not a budget')
             return False  # represents load was unsuccessful
 
-        # step 2: separate keys and values from order
-        order_dirnames = []
-        order_names = []
-        for d in data['order']:
-            order_dirnames.append(list(d.keys())[0])
-            order_names.append(list(d.values())[0])
-
-        # step 3: load each directory in config.json based on order
+        # step 2: load each directory in config.json based on order
         # if a directory is missing issue a warning
         for d in data['order']:
-            fp = Path(file_directory, list(d.keys())[0])
-            data[list(d.values())[0]] = self.load_budget_from_directory(fp)
+            fp = Path(file_directory, d['dirname'])
+            data[d['name']] = self.load_budget_from_directory(fp)
 
-        data['order'] = order_names
+        data['order'] = [d['name'] for d in data['order']]
         self.template_data = data
 
         return True  # represents load was successful

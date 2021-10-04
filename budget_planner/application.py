@@ -88,7 +88,7 @@ class Application(tk.Tk):
         return response
 
     def load_budget_group(self):
-        """Not sure yet."""
+        """Creates class for user to select budget grouping and then tries to open requested budget grouping."""
         lb = v.LoadBudget(self, self.callbacks)
         success = False
         if lb.filepath:

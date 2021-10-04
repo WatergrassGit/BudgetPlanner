@@ -95,5 +95,5 @@ class Application(tk.Tk):
             success = self.data_model.load_budget_group(lb.filepath)
         if success:
             current_budget = self.data_model.template_data["current_budget"]
-            self.budget_view.view_data = self.data_model.template_data[current_budget]
+            self.budget_view.view_data = self.data_model.template_data['budgets'][current_budget]
             self.update_frames()

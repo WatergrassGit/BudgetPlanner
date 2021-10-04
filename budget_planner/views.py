@@ -140,7 +140,7 @@ class BudgetView(ttk.Frame):
             self.view_data = master.data_model.template_data['template']  # not a copy
         if self.master.data_model.template_data['type'] == 'budget':
             newest_budget = master.data_model.template_data['order'][-1]
-            self.view_data = master.data_model.template_data[newest_budget]
+            self.view_data = master.data_model.template_data['budgets'][newest_budget]
 
         # fill BudgetView with content
         self.category_column_names = ('#0', 'name', 'budget', 'actual')
@@ -859,7 +859,7 @@ class BudgetView(ttk.Frame):
             print("There are no earlier budgets!")
             return
         self.master.data_model.template_data["current_budget"] = previous_budget
-        self.view_data = self.master.data_model.template_data[previous_budget]
+        self.view_data = self.master.data_model.template_data['budgets'][previous_budget]
         self.update_frames()
 
     def get_next_budget(self):
@@ -871,7 +871,7 @@ class BudgetView(ttk.Frame):
         try:
             next_budget = self.master.data_model.template_data['order'][placement + 1]
             self.master.data_model.template_data["current_budget"] = next_budget
-            self.view_data = self.master.data_model.template_data[next_budget]
+            self.view_data = self.master.data_model.template_data['budgets'][next_budget]
             self.update_frames()
         except IndexError:
             create_next_budget = messagebox.askyesno(
@@ -898,12 +898,12 @@ class BudgetView(ttk.Frame):
                     else:
                         self.master.data_model.template_data["current_budget"] = next_budget
                         self.master.data_model.template_data["order"].append(next_budget)
-                        self.master.data_model.template_data[next_budget] = {
+                        self.master.data_model.template_data['budgets'][next_budget] = {
                             'income_categories': [],
                             'expense_categories': [],
                             'transactions': [],
                         }
-                        self.view_data = self.master.data_model.template_data[next_budget]
+                        self.view_data = self.master.data_model.template_data['budgets'][next_budget]
                         self.update_frames()
                         add_next_budget_window.destroy()
                         add_next_budget_window.update()
@@ -971,8 +971,9 @@ class CreateBudget(tk.Toplevel):
         self.new_budget["type"] = "budget"
         self.new_budget["name"] = self.budget_name.get()
         self.new_budget["current_budget"] = first_budget
+        self.new_budget["budgets"] = {}
         self.new_budget["order"] = [first_budget]
-        self.new_budget[first_budget] = {
+        self.new_budget["budgets"][first_budget] = {
             'income_categories': [],
             'expense_categories': [],
             'transactions': [],
@@ -986,8 +987,8 @@ class CreateBudget(tk.Toplevel):
         self.master.data_model.template_data = self.new_budget
 
         newest_budget = self.new_budget['order'][-1]
-        self.view_data = self.new_budget[newest_budget]
-        self.master.budget_view.view_data = self.new_budget[newest_budget]
+        self.view_data = self.new_budget['budgets'][newest_budget]
+        self.master.budget_view.view_data = self.new_budget['budgets'][newest_budget]
         self.callbacks['update_frames']()
 
 

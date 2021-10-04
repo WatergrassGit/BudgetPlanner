@@ -208,7 +208,7 @@ class ProjectModel:
             for d in order_lod:
                 self.initiate_directory(Path(budget_group_path, d['dirname']))
                 for i in range(3):
-                    df = pd.DataFrame(self.template_data[d['name']][data_groups[i]])
+                    df = pd.DataFrame(self.template_data['budgets'][d['name']][data_groups[i]])
                     fp = Path(budget_group_path, d['dirname'], file_names[i])
                     df.to_csv(fp, index=False)
 
@@ -255,9 +255,10 @@ class ProjectModel:
 
         # step 2: load each directory in config.json based on order
         # if a directory is missing issue a warning
+        data['budgets'] = {}
         for d in data['order']:
             fp = Path(file_directory, d['dirname'])
-            data[d['name']] = self.load_budget_from_directory(fp)
+            data['budgets'][d['name']] = self.load_budget_from_directory(fp)
 
         data['order'] = [d['name'] for d in data['order']]
         self.template_data = data

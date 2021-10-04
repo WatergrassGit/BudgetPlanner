@@ -244,7 +244,6 @@ class ProjectModel:
         for d in data['order']:
             order_dirnames.append(list(d.keys())[0])
             order_names.append(list(d.values())[0])
-        #data['order'] = order_names
 
         # step 3: load each directory in config.json based on order
         # if a directory is missing issue a warning
@@ -252,6 +251,7 @@ class ProjectModel:
             fp = Path(file_directory, list(d.keys())[0])
             data[list(d.values())[0]] = self.load_budget_from_directory(fp)
 
+        data['order'] = order_names
         self.template_data = data
 
         return True  # represents load was successful

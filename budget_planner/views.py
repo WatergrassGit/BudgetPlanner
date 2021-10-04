@@ -951,25 +951,33 @@ class CreateBudget(tk.Toplevel):
         self.callbacks = callbacks
         self.master = master
 
-        self.wm_title("Create New Budget")
+        self.wm_title("Create Group")
 
-        text_label = ttk.Label(self, text="Budget Name")
+        text_label_r1 = ttk.Label(self, text="Budget Group Name: ")
+        self.budget_group_name = ttk.Entry(self)
+        self.budget_group_name.insert(0, "New Budget")
+
+        text_label_r2 = ttk.Label(self, text="Initial Budget Name: ")
         self.budget_name = ttk.Entry(self)
+        self.budget_name.insert(0, "Origin")
+
         submit_button = ttk.Button(self, text="Create", command=self.create_new_budget)
 
-        text_label.grid(column=0, row=0)
-        self.budget_name.grid(column=1, row=0)
-        submit_button.grid(column=2, row=0)
+        text_label_r1.grid(column=0, row=0)
+        text_label_r2.grid(column=0, row=1)
+        self.budget_group_name.grid(column=1, row=0)
+        self.budget_name.grid(column=1, row=1)
+        submit_button.grid(column=1, row=2, sticky="e")
 
         self.new_budget = {}
 
     def create_new_budget(self):
         """Sets defaults for a new budget and then calls method to reset BudgetView with new budget."""
 
-        first_budget = "origin"
+        first_budget = self.budget_name.get()
 
         self.new_budget["type"] = "budget"
-        self.new_budget["name"] = self.budget_name.get()
+        self.new_budget["name"] = self.budget_group_name.get()
         self.new_budget["current_budget"] = first_budget
         self.new_budget["budgets"] = {}
         self.new_budget["order"] = [first_budget]

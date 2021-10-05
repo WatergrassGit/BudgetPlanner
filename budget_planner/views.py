@@ -622,13 +622,14 @@ class BudgetView(ttk.Frame):
             """
 
             new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
-            if call == "add":
-                self.view_data['expense_categories'].append(new_entry)
-            elif call == "insert":
-                self.view_data['expense_categories'].insert(int(row), new_entry)
-            elif call == "edit":
-                self.view_data['expense_categories'][int(row)] = new_entry
-            self.update_frames()
+            if new_entry['name'] not in [en['name'] for en in self.view_data['expense_categories']]:
+                if call == "add":
+                    self.view_data['expense_categories'].append(new_entry)
+                elif call == "insert":
+                    self.view_data['expense_categories'].insert(int(row), new_entry)
+                elif call == "edit":
+                    self.view_data['expense_categories'][int(row)] = new_entry
+                self.update_frames()
 
         i = 0
         for i, name in enumerate(entry_names):
@@ -830,13 +831,14 @@ class BudgetView(ttk.Frame):
             """
 
             new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
-            if call == "add":
-                self.view_data['income_categories'].append(new_entry)
-            elif call == "insert":
-                self.view_data['income_categories'].insert(int(row), new_entry)
-            elif call == "edit":
-                self.view_data['income_categories'][int(row)] = new_entry
-            self.update_frames()
+            if new_entry['name'] not in [en['name'] for en in self.view_data['income_categories']]:
+                if call == "add":
+                    self.view_data['income_categories'].append(new_entry)
+                elif call == "insert":
+                    self.view_data['income_categories'].insert(int(row), new_entry)
+                elif call == "edit":
+                    self.view_data['income_categories'][int(row)] = new_entry
+                self.update_frames()
 
         i = 0
         for i, name in enumerate(entry_names):

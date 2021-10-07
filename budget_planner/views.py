@@ -4,7 +4,7 @@ from tkinter import messagebox
 from tkinter import filedialog
 from decimal import Decimal
 from datetime import date
-from .widgets import AutoScrollbar
+from .widgets import AutoScrollbar, DateEntry, DollarEntry, RequiredEntry, DecimalEntry
 
 
 class BudgetView(ttk.Frame):
@@ -146,16 +146,19 @@ class BudgetView(ttk.Frame):
         self.category_column_names = ('#0', 'name', 'budget', 'actual')
         self.editable_category_column_names = self.category_column_names[1:3]
         self.editable_category_column_datatypes = [str, Decimal]
+        self.category_entry_widgets = [RequiredEntry, DollarEntry]
         self.category_column_widths = (0, 160, 80, 80)
 
         self.job_column_names = ('#0', 'name', 'hourly_pay', 'hours', 'tax_rate', 'wages')
         self.editable_job_column_names = self.job_column_names[1:5]
         self.editable_job_column_datatypes = [str, Decimal, Decimal, Decimal]
+        self.job_entry_widgets = [RequiredEntry, DollarEntry, DollarEntry, DecimalEntry]
         self.job_column_widths = (0, 80, 80, 50, 70, 60)
 
         self.transaction_column_names = ('#0', 'date', 'merchant', 'category', 'outlay', 'inflow', 'net')
         self.editable_transaction_column_names = self.transaction_column_names[1:6]
         self.editable_transaction_column_datatypes = [str, str, str, Decimal, Decimal]
+        self.transaction_entry_widgets = [DateEntry, RequiredEntry, RequiredEntry, DollarEntry, DollarEntry]
         self.transaction_column_widths = (0, 80, 160, 160, 80, 80, 80)
 
         self.update_frames()
@@ -611,6 +614,7 @@ class BudgetView(ttk.Frame):
         modify_window.wm_title(title)
 
         entry_names = self.editable_category_column_names
+        entry_widgets = self.category_entry_widgets
         function_calls = self.editable_category_column_datatypes
 
         entries = {}  # holds data submitted
@@ -621,21 +625,25 @@ class BudgetView(ttk.Frame):
             to the active expense category list. It finally refreshes BudgetView.
             """
 
-            new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
-            if new_entry['name'] not in [en['name'] for en in self.view_data['expense_categories']]:
-                if call == "add":
-                    self.view_data['expense_categories'].append(new_entry)
-                elif call == "insert":
-                    self.view_data['expense_categories'].insert(int(row), new_entry)
-                elif call == "edit":
-                    self.view_data['expense_categories'][int(row)] = new_entry
-                self.update_frames()
+            errors = self.get_entry_widget_errors(entries)
+
+            if not errors:
+                new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
+                if new_entry['name'] not in [en['name'] for en in self.view_data['expense_categories']]:
+                    if call == "add":
+                        self.view_data['expense_categories'].append(new_entry)
+                    elif call == "insert":
+                        self.view_data['expense_categories'].insert(int(row), new_entry)
+                    elif call == "edit":
+                        self.view_data['expense_categories'][int(row)] = new_entry
+                    self.update_frames()
 
         i = 0
         for i, name in enumerate(entry_names):
             ttk.Label(modify_window, text=name.title()).grid(column=i, row=0)
-            entries[name] = ttk.Entry(modify_window)
-            entries[name].insert(0, entry_defaults[i])
+            entries[name] = entry_widgets[i](modify_window)
+            for j, string in enumerate(str(entry_defaults[i])):
+                entries[name].insert(j, string)
             entries[name].grid(column=i, row=1)
         modify_button = ttk.Button(modify_window, text=button_text, command=call_update_frames)
         modify_button.grid(column=i, row=2, sticky='e')
@@ -716,6 +724,7 @@ class BudgetView(ttk.Frame):
         modify_transaction_window.wm_title(title)
 
         entry_names = self.editable_transaction_column_names
+        entry_widgets = self.transaction_entry_widgets
         function_calls = self.editable_transaction_column_datatypes
 
         entries = {}  # holds data submitted
@@ -726,20 +735,24 @@ class BudgetView(ttk.Frame):
             the active transaction list. It finally refreshes BudgetView.
             """
 
-            new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
-            if call == "add":
-                self.view_data['transactions'].append(new_entry)
-            elif call == "insert":
-                self.view_data['transactions'].insert(int(row), new_entry)
-            elif call == "edit":
-                self.view_data['transactions'][int(row)] = new_entry
-            self.update_frames()
+            errors = self.get_entry_widget_errors(entries)
+
+            if not errors:
+                new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
+                if call == "add":
+                    self.view_data['transactions'].append(new_entry)
+                elif call == "insert":
+                    self.view_data['transactions'].insert(int(row), new_entry)
+                elif call == "edit":
+                    self.view_data['transactions'][int(row)] = new_entry
+                self.update_frames()
 
         i = 0
         for i, name in enumerate(entry_names):
             ttk.Label(modify_transaction_window, text=name.title()).grid(column=i, row=0)
-            entries[name] = ttk.Entry(modify_transaction_window)
-            entries[name].insert(0, entry_defaults[i])
+            entries[name] = entry_widgets[i](modify_transaction_window)
+            for j, string in enumerate(str(entry_defaults[i])):
+                entries[name].insert(j, string)
             entries[name].grid(column=i, row=1)
         modify_transaction_button = ttk.Button(modify_transaction_window, text=button_text, command=call_update_frames)
         modify_transaction_button.grid(column=i, row=2, sticky='e')
@@ -820,6 +833,7 @@ class BudgetView(ttk.Frame):
         modify_window.wm_title(title)
 
         entry_names = self.editable_job_column_names
+        entry_widgets = self.job_entry_widgets
         function_calls = self.editable_job_column_datatypes
 
         entries = {}  # holds data submitted
@@ -830,21 +844,25 @@ class BudgetView(ttk.Frame):
             job to the active job list. It finally refreshes BudgetView.
             """
 
-            new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
-            if new_entry['name'] not in [en['name'] for en in self.view_data['income_categories']]:
-                if call == "add":
-                    self.view_data['income_categories'].append(new_entry)
-                elif call == "insert":
-                    self.view_data['income_categories'].insert(int(row), new_entry)
-                elif call == "edit":
-                    self.view_data['income_categories'][int(row)] = new_entry
-                self.update_frames()
+            errors = self.get_entry_widget_errors(entries)
+
+            if not errors:
+                new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
+                if new_entry['name'] not in [en['name'] for en in self.view_data['income_categories']]:
+                    if call == "add":
+                        self.view_data['income_categories'].append(new_entry)
+                    elif call == "insert":
+                        self.view_data['income_categories'].insert(int(row), new_entry)
+                    elif call == "edit":
+                        self.view_data['income_categories'][int(row)] = new_entry
+                    self.update_frames()
 
         i = 0
         for i, name in enumerate(entry_names):
             ttk.Label(modify_window, text=name.title()).grid(column=i, row=0)
-            entries[name] = ttk.Entry(modify_window)
-            entries[name].insert(0, entry_defaults[i])
+            entries[name] = entry_widgets[i](modify_window)
+            for j, string in enumerate(str(entry_defaults[i])):
+                entries[name].insert(j, string)
             entries[name].grid(column=i, row=1)
         modify_button = ttk.Button(modify_window, text=button_text, command=call_update_frames)
         modify_button.grid(column=i, row=2, sticky='e')
@@ -920,6 +938,33 @@ class BudgetView(ttk.Frame):
 
             else:
                 return
+
+    @staticmethod
+    def get_entry_widget_errors(entry_widgets):
+        errors = {}
+        for key, widget in entry_widgets.items():
+            if hasattr(widget, "trigger_focusout_validation"):
+                widget.trigger_focusout_validation()
+            error_code = ''
+            try:
+                error_code = widget.error.get()
+            except AttributeError:
+                error_code = ''
+            finally:
+                if error_code:
+                    errors[key] = widget.error.get()
+
+        if errors:
+            error_mesasage = ''
+            for key, value in errors.items():
+                error_mesasage += f'\n\t{key} : {value}'
+
+            messagebox.showerror(
+                title="Entry Errors",
+                message=f"The following errors occurred: {error_mesasage}",
+                detail="Data must be resubmitted."
+            )
+        return errors
 
     def set_styles(self):
         #self.styles.theme_use('clam')

@@ -540,7 +540,8 @@ class BudgetView(ttk.Frame):
     def add_category(self):
         """Add new category to the expense category treeview by calling private method."""
 
-        self._modify_category_window(
+        self._modify_table_window(
+            table="expense_categories",
             call="add",
             title="New Category",
             entry_defaults=['Placeholder', Decimal(0)],
@@ -557,7 +558,8 @@ class BudgetView(ttk.Frame):
 
         row = self.expense_tv.focus()  # get expense category treeview's selected row number
         if row:  # doesn't run if empty string is returned
-            self._modify_category_window(
+            self._modify_table_window(
+                table="expense_categories",
                 call="insert",
                 title="Insert Category",
                 entry_defaults=['Placeholder', Decimal(0)],
@@ -576,7 +578,8 @@ class BudgetView(ttk.Frame):
         if row:  # runs only if a row is selected
             defaults = self.view_data['expense_categories'][int(row)]  # get data from selected treeview row
             defaults = [defaults[d] for d in self.editable_category_column_names]
-            self._modify_category_window(
+            self._modify_table_window(
+                table="expense_categories",
                 call="edit",
                 title="Edit Category",
                 entry_defaults=defaults,
@@ -601,53 +604,6 @@ class BudgetView(ttk.Frame):
             finally:
                 self.update_frames()
 
-    def _modify_category_window(self, call, title, entry_defaults, button_text, row=0):
-        """
-        Method used to add, edit or insert a row to the expense category treeview.
-
-        This is done by creating entry widgets that the user enters data into and then submits.
-        This is a private method called by methods which determine whether this method is
-        used to add, edit or insert data.
-        """
-
-        modify_window = tk.Toplevel(self)
-        modify_window.wm_title(title)
-
-        entry_names = self.editable_category_column_names
-        entry_widgets = self.category_entry_widgets
-        function_calls = self.editable_category_column_datatypes
-
-        entries = {}  # holds data submitted
-
-        def call_update_frames():
-            """
-            Helper function which extracts entry widgets' values. It then adds, inserts, or edits an expense category
-            to the active expense category list. It finally refreshes BudgetView.
-            """
-
-            errors = self.get_entry_widget_errors(entries)
-
-            if not errors:
-                new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
-                if new_entry['name'] not in [en['name'] for en in self.view_data['expense_categories']]:
-                    if call == "add":
-                        self.view_data['expense_categories'].append(new_entry)
-                    elif call == "insert":
-                        self.view_data['expense_categories'].insert(int(row), new_entry)
-                    elif call == "edit":
-                        self.view_data['expense_categories'][int(row)] = new_entry
-                    self.update_frames()
-
-        i = 0
-        for i, name in enumerate(entry_names):
-            ttk.Label(modify_window, text=name.title()).grid(column=i, row=0)
-            entries[name] = entry_widgets[i](modify_window)
-            for j, string in enumerate(str(entry_defaults[i])):
-                entries[name].insert(j, string)
-            entries[name].grid(column=i, row=1)
-        modify_button = ttk.Button(modify_window, text=button_text, command=call_update_frames)
-        modify_button.grid(column=i, row=2, sticky='e')
-
     def call_transaction_popup_menu(self, event):
         """Method to create a small popup menu for the transaction treeview"""
 
@@ -659,7 +615,8 @@ class BudgetView(ttk.Frame):
     def add_transaction(self):
         """Add new transaction to transaction treeview by calling private method."""
 
-        self._modify_transactions_window(
+        self._modify_table_window(
+            table="transactions",
             call="add",
             title="New Transaction",
             entry_defaults=[date.today(), "home", "food", Decimal(100), Decimal(0)],
@@ -676,7 +633,8 @@ class BudgetView(ttk.Frame):
 
         row = self.transaction_tv.focus()  # get transaction treeview selected row number
         if row:  # doesn't run if empty string is returned
-            self._modify_transactions_window(
+            self._modify_table_window(
+                table="transactions",
                 call="insert",
                 title="Insert Transaction",
                 entry_defaults=[date.today(), "Home", "Food", Decimal(100), Decimal(0)],
@@ -695,7 +653,8 @@ class BudgetView(ttk.Frame):
         if row:  # runs only if a row is selected
             defaults = self.view_data['transactions'][int(row)]  # get data from selected treeview row
             defaults = [defaults[d] for d in self.editable_transaction_column_names]
-            self._modify_transactions_window(
+            self._modify_table_window(
+                table="transactions",
                 call="edit",
                 title="Edit Transaction",
                 entry_defaults=defaults,
@@ -711,52 +670,6 @@ class BudgetView(ttk.Frame):
             del self.view_data['transactions'][int(row)]  # remove selected treeview row
             self.update_frames()
 
-    def _modify_transactions_window(self, call, title, entry_defaults, button_text, row=0):
-        """
-        Method used to add, edit or insert a row to the transactions treeview.
-
-        This is done by creating entry widgets that the user enters data into and then submits.
-        This is a private method called by methods which determine whether this method is
-        used to add, edit or insert data.
-        """
-
-        modify_transaction_window = tk.Toplevel(self)
-        modify_transaction_window.wm_title(title)
-
-        entry_names = self.editable_transaction_column_names
-        entry_widgets = self.transaction_entry_widgets
-        function_calls = self.editable_transaction_column_datatypes
-
-        entries = {}  # holds data submitted
-
-        def call_update_frames():
-            """
-            Helper function which extracts entry widgets' values. It then adds, inserts, or edits a transaction to
-            the active transaction list. It finally refreshes BudgetView.
-            """
-
-            errors = self.get_entry_widget_errors(entries)
-
-            if not errors:
-                new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
-                if call == "add":
-                    self.view_data['transactions'].append(new_entry)
-                elif call == "insert":
-                    self.view_data['transactions'].insert(int(row), new_entry)
-                elif call == "edit":
-                    self.view_data['transactions'][int(row)] = new_entry
-                self.update_frames()
-
-        i = 0
-        for i, name in enumerate(entry_names):
-            ttk.Label(modify_transaction_window, text=name.title()).grid(column=i, row=0)
-            entries[name] = entry_widgets[i](modify_transaction_window)
-            for j, string in enumerate(str(entry_defaults[i])):
-                entries[name].insert(j, string)
-            entries[name].grid(column=i, row=1)
-        modify_transaction_button = ttk.Button(modify_transaction_window, text=button_text, command=call_update_frames)
-        modify_transaction_button.grid(column=i, row=2, sticky='e')
-
     def call_job_popup_menu(self, event):
         """Method to create a small popup menu for the middle treeview"""
 
@@ -768,7 +681,8 @@ class BudgetView(ttk.Frame):
     def add_job(self):
         """Add new job to middle treeview by calling private method."""
 
-        self._modify_jobs_window(
+        self._modify_table_window(
+            table='income_categories',
             call="add",
             title="New Job",
             entry_defaults=["Job1", Decimal(0), Decimal(0), Decimal(0)],
@@ -785,7 +699,8 @@ class BudgetView(ttk.Frame):
 
         row = self.middle_tv.focus()  # get middle treeview selected row number
         if row:  # doesn't run if empty string is returned
-            self._modify_jobs_window(
+            self._modify_table_window(
+                table='income_categories',
                 call="insert",
                 title="Insert Job",
                 entry_defaults=["Job2", Decimal(0), Decimal(0), Decimal(0)],
@@ -804,7 +719,8 @@ class BudgetView(ttk.Frame):
         if row:  # runs only if a row is selected
             defaults = self.view_data['income_categories'][int(row)]  # get data from selected treeview row
             defaults = [defaults[d] for d in self.editable_job_column_names]
-            self._modify_jobs_window(
+            self._modify_table_window(
+                table='income_categories',
                 call="edit",
                 title="Edit Job",
                 entry_defaults=defaults,
@@ -820,9 +736,9 @@ class BudgetView(ttk.Frame):
             del self.view_data['income_categories'][int(row)]  # remove selected treeview row
             self.update_frames()
 
-    def _modify_jobs_window(self, call, title, entry_defaults, button_text, row=0):
+    def _modify_table_window(self, table, call, title, entry_defaults, button_text, row=0):
         """
-        Method used to add, edit or insert a row to the middle treeview.
+        Method called to add, edit or insert a row in one of the BudgetView treeviews.
 
         This is done by creating entry widgets that the user enters data into and then submits.
         This is a private method called by methods which determine whether this method is
@@ -832,29 +748,73 @@ class BudgetView(ttk.Frame):
         modify_window = tk.Toplevel(self)
         modify_window.wm_title(title)
 
-        entry_names = self.editable_job_column_names
-        entry_widgets = self.job_entry_widgets
-        function_calls = self.editable_job_column_datatypes
+        # set if elif else for which table is being updated
+        if table == 'income_categories':
+            entry_names = self.editable_job_column_names
+            entry_widgets = self.job_entry_widgets
+            function_calls = self.editable_job_column_datatypes
+            which_treeview = table
+        elif table == 'expense_categories':
+            entry_names = self.editable_category_column_names
+            entry_widgets = self.category_entry_widgets
+            function_calls = self.editable_category_column_datatypes
+            which_treeview = table
+        else:  # case when table == 'transactions'
+            entry_names = self.editable_transaction_column_names
+            entry_widgets = self.transaction_entry_widgets
+            function_calls = self.editable_transaction_column_datatypes
+            which_treeview = table
 
         entries = {}  # holds data submitted
 
         def call_update_frames():
             """
             Helper function which extracts entry widgets' values. It then adds, inserts, or edits a
-            job to the active job list. It finally refreshes BudgetView.
+            the selected treeview. It finally refreshes BudgetView.
             """
 
-            errors = self.get_entry_widget_errors(entries)
+            # catch errors
+            errors = {}
+            for key, widget in entries.items():
+                if hasattr(widget, "trigger_focusout_validation"):
+                    widget.trigger_focusout_validation()
+                error_code = ''
+                try:
+                    error_code = widget.error.get()
+                except AttributeError:
+                    error_code = ''
+                finally:
+                    if error_code:
+                        errors[key] = widget.error.get()
+            # display errors if they exist
+            if errors:
+                error_mesasage = ''
+                for key, value in errors.items():
+                    error_mesasage += f'\n\t{key} : {value}'
+
+                messagebox.showerror(
+                    title="Entry Errors",
+                    message=f"The following errors occurred: {error_mesasage}",
+                    detail="Data must be resubmitted."
+                )
 
             if not errors:
                 new_entry = {en: function_calls[k](entries[en].get()) for k, en in enumerate(entry_names)}
-                if new_entry['name'] not in [en['name'] for en in self.view_data['income_categories']]:
+                if which_treeview == 'transactions':
+                    update = True
+                elif call == 'edit':
+                    update = True
+                elif new_entry['name'] not in [en['name'] for en in self.view_data[which_treeview]]:
+                    update = True
+                else:
+                    update = False
+                if update:
                     if call == "add":
-                        self.view_data['income_categories'].append(new_entry)
+                        self.view_data[which_treeview].append(new_entry)
                     elif call == "insert":
-                        self.view_data['income_categories'].insert(int(row), new_entry)
+                        self.view_data[which_treeview].insert(int(row), new_entry)
                     elif call == "edit":
-                        self.view_data['income_categories'][int(row)] = new_entry
+                        self.view_data[which_treeview][int(row)] = new_entry
                     self.update_frames()
 
         i = 0
@@ -938,33 +898,6 @@ class BudgetView(ttk.Frame):
 
             else:
                 return
-
-    @staticmethod
-    def get_entry_widget_errors(entry_widgets):
-        errors = {}
-        for key, widget in entry_widgets.items():
-            if hasattr(widget, "trigger_focusout_validation"):
-                widget.trigger_focusout_validation()
-            error_code = ''
-            try:
-                error_code = widget.error.get()
-            except AttributeError:
-                error_code = ''
-            finally:
-                if error_code:
-                    errors[key] = widget.error.get()
-
-        if errors:
-            error_mesasage = ''
-            for key, value in errors.items():
-                error_mesasage += f'\n\t{key} : {value}'
-
-            messagebox.showerror(
-                title="Entry Errors",
-                message=f"The following errors occurred: {error_mesasage}",
-                detail="Data must be resubmitted."
-            )
-        return errors
 
     def set_styles(self):
         #self.styles.theme_use('clam')

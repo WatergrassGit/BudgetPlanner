@@ -329,7 +329,7 @@ class BudgetView(ttk.Frame):
             # get cost of all transactions for a given expense category
             category_expense_total = 0
             for trans in transactions:
-                if trans['category'] in value['name']:
+                if trans['category'] == value['name']:
                     category_expense_total += trans['outlay']
             self.expense_tv.insert(
                 parent='',

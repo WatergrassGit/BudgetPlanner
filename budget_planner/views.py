@@ -228,79 +228,79 @@ class BudgetView(ttk.Frame):
             self.title_label.configure(text="Template")
 
     def add_content_category_frame(self):
-        """Function to add category frame with content. Determines which data to load."""
+        """Function to fill category frame with content. Determines how to display data."""
 
         column_names = self.category_column_names
         column_widths = self.category_column_widths
         column_dictionary = dict(zip(column_names, column_widths))
 
-        # set new names for data in template_data
+        # set new names for data in view_data
         income_categories = self.view_data['income_categories']
         expense_categories = self.view_data['expense_categories']
         transactions = self.view_data['transactions']
 
-        # add content to income treeview
-        # add the header income treeview
+        # add content to income treeview header
         self.income_tv_header.config(columns=column_names[1:], selectmode='none', height=1)
         for k, v in column_dictionary.items():
             self.income_tv_header.column(k, width=v, stretch='NO')
         self.income_tv_header.insert(
             parent='', index=0, iid=0,
-            value=('---INCOME---', 'Budget', 'Actual'),
+            value=('---INCOME---', 'Expected', 'Actual'),
             tags=('header',)
         )
         self.income_tv_header.tag_configure("header", foreground="black", background="#70AD47")
 
-        # add the main income treeview
+        # add content to income treeview body
         self.income_tv.config(columns=column_names[1:], selectmode='browse')
         for k, v in column_dictionary.items():
             self.income_tv.column(k, width=v, stretch='NO')
 
-        # add income categories to income treeview
-        index = 0
-        income_budget = 0
-        income_actual = 0
-        for index, value in enumerate(income_categories):
+        # initialize variables
+        actual_income = Decimal('0')
+        uncategorized_income = Decimal('0')
+
+        # create dictionary to hold values which will be inserted into the income treeview body
+        income_category_totals = {
+            k['name']: {'expected': k['hourly_pay'] * k['hours'], 'actual': Decimal('0')}
+            for k in income_categories
+        }
+
+        for tran in transactions:
+            inflow = tran['inflow']
+            merchant = tran['merchant']
+            if inflow > 0:
+                actual_income += inflow
+                if merchant in income_category_totals.keys():
+                    income_category_totals[merchant]['actual'] += inflow
+                else:
+                    uncategorized_income += inflow
+
+        # determine whether to display uncategorized income row
+        if uncategorized_income > 0:
+            income_category_totals['Uncategorized'] = dict(expected=Decimal('0'), actual=uncategorized_income)
+
+        expected_income = sum([v['expected'] for v in income_category_totals.values()])
+        income_category_totals['SUBTOTAL'] = dict(expected=expected_income, actual=actual_income)
+
+        for index, (k, v) in enumerate(income_category_totals.items()):
             if index % 2 == 0:
                 parity = 'even'
             else:
                 parity = 'odd'
-            category_income_total = 0
-            for trans in transactions:
-                if trans['category'] in "Income" and trans['merchant'] in value['name']:
-                    category_income_total += trans['inflow']
             self.income_tv.insert(
                 parent='',
                 index=index,
                 iid=index,
-                values=(
-                    value['name'],
-                    round(value['hourly_pay'] * value['hours'], 2),
-                    max(Decimal('0.00'), category_income_total)
-                ),
+                values=(k, round(v['expected'], 2), v['actual']),
                 tags=(parity,)
             )
-            income_budget += round(value['hourly_pay'] * value['hours'], 2)
-            income_actual += category_income_total
-        index += 1
-        if index % 2 == 0:
-            parity = 'even'
-        else:
-            parity = 'odd'
-        self.income_tv.insert(
-            parent='',
-            index=index,
-            iid=index,
-            values=("SUBTOTAL", income_budget, income_actual),
-            tags=(parity,)
-        )
         # add colors based on tag
         self.income_tv.tag_configure("even", foreground="black", background="white")
         self.income_tv.tag_configure("odd", foreground="black", background="grey75")
         # set height based on number of income categories plus a subtotal row
-        self.income_tv.config(height=len(income_categories) + 1)
+        self.income_tv.config(height=len(income_category_totals))
 
-        # add content to expense treeview
+        # add content to expense treeview header
         self.expense_tv_header.config(columns=column_names[1:], selectmode='none', height=1)
         for k, v in column_dictionary.items():
             self.expense_tv_header.column(k, width=v, stretch='NO')
@@ -312,73 +312,46 @@ class BudgetView(ttk.Frame):
         )
         self.expense_tv_header.tag_configure("header", foreground="black", background="#5B9BD5")
 
+        # add content to expense treeview body
         self.expense_tv.config(columns=column_names[1:], selectmode='browse', height=20)
         for k, v in column_dictionary.items():
             self.expense_tv.column(k, width=v, stretch='NO')
 
         # add user rows to expense_treeview based on given categories
-        expense_table_rows = len(expense_categories)  # keep track of rows needed for treeview
-        index = 0
-        expense_budget = 0
-        expense_actual = 0
-        for index, value in enumerate(expense_categories):
-            if index % 2 == 0:
-                parity = 'even'
-            else:
-                parity = 'odd'
-            # get cost of all transactions for a given expense category
-            category_expense_total = 0
-            for trans in transactions:
-                if trans['category'] == value['name']:
-                    category_expense_total += trans['outlay']
-            self.expense_tv.insert(
-                parent='',
-                index=index,
-                iid=index,
-                values=(
-                    value['name'],
-                    value['budget'],
-                    category_expense_total
-                ),
-                tags=(parity,)
-            )
-            expense_budget += value['budget']
-            expense_actual += category_expense_total
+        actual_expense = Decimal('0')
+        taxed_income = Decimal('0')
+        uncategorized_expense = Decimal('0')
 
-        # add row to expense treeview for income taxes
-        tax_category_name = 'Income'
-        category_expense_total = 0
-        expense_category_names = [category['name'] for category in expense_categories]
-        expense_category_names.append(tax_category_name)
-        for trans in transactions:
-            if trans['category'] == tax_category_name:
-                category_expense_total += trans['outlay']
-        tax_total = 0
-        for ic in income_categories:
-            tax_total += ic['hourly_pay'] * ic['hours'] * ic['tax_rate']
-        index += 1
-        if index % 2 == 0:
-            parity = 'even'
-        else:
-            parity = 'odd'
-        self.expense_tv.insert(
-            parent='',
-            index=index,
-            iid=index,
-            values=("Income Tax", round(tax_total, 2), category_expense_total),
-            tags=(parity,)
-        )
-        expense_table_rows += 1
-        expense_budget += round(tax_total, 2)
-        expense_actual += category_expense_total
+        # create dictionary to hold values which will be inserted into the expense treeview body
+        expense_category_totals = {
+            k['name']: {'budget': k['budget'], 'actual': Decimal('0')}
+            for k in expense_categories
+        }
 
-        # add row for expense transactions which do not have a matching expense category (hide when empty)
-        category_expense_total = 0
-        for trans in transactions:
-            if trans['category'] not in expense_category_names:
-                category_expense_total += trans['outlay']
-        if category_expense_total > 0:
-            index += 1
+        for tran in transactions:
+            outlay = tran['outlay']
+            merchant = tran['merchant']
+            category = tran['category']
+            if outlay > 0:
+                actual_expense += outlay
+                if category in expense_category_totals.keys():
+                    expense_category_totals[category]['actual'] += outlay
+                elif merchant in [k['name'] for k in income_categories]:
+                    taxed_income += outlay
+                else:
+                    uncategorized_expense += outlay
+
+        budgeted_income_taxes = sum([ic['hourly_pay'] * ic['hours'] * ic['tax_rate'] for ic in income_categories])
+        expense_category_totals['Income Tax'] = dict(budget=budgeted_income_taxes, actual=taxed_income)
+
+        # determine whether to display uncategorized expense row
+        if uncategorized_expense > 0:
+            expense_category_totals['Uncategorized'] = dict(budget=Decimal('0'), actual=uncategorized_expense)
+
+        budgeted_expense = sum([v['budget'] for v in expense_category_totals.values()])
+        expense_category_totals['SUBTOTAL'] = dict(budget=budgeted_expense, actual=actual_expense)
+
+        for index, (k, v) in enumerate(expense_category_totals.items()):
             if index % 2 == 0:
                 parity = 'even'
             else:
@@ -387,32 +360,15 @@ class BudgetView(ttk.Frame):
                 parent='',
                 index=index,
                 iid=index,
-                values=("Uncategorized", Decimal('0.00'), category_expense_total),
+                values=(k, round(v['budget'], 2), v['actual']),
                 tags=(parity,)
             )
-            expense_table_rows += 1
-            expense_budget += Decimal('0.00')
-            expense_actual += category_expense_total
 
-        # add row for expense subtotals
-        index += 1
-        if index % 2 == 0:
-            parity = 'even'
-        else:
-            parity = 'odd'
-        self.expense_tv.insert(
-            parent='',
-            index=index,
-            iid=index,
-            values=("SUBTOTAL", expense_budget, expense_actual),
-            tags=(parity,)
-        )
-        expense_table_rows += 1
         # add colors based on tag
         self.expense_tv.tag_configure("even", foreground="black", background="white")
         self.expense_tv.tag_configure("odd", foreground="black", background="grey75")
         # set number of rows
-        self.expense_tv.config(height=expense_table_rows)
+        self.expense_tv.config(height=len(expense_category_totals))
 
         # set up treeview to aggregate income and expense totals
         self.net_income_tv.config(columns=column_names[1:], selectmode='none', height=1)
@@ -420,7 +376,11 @@ class BudgetView(ttk.Frame):
             self.net_income_tv.column(k, width=v, stretch='NO')
         self.net_income_tv.insert(
             parent='', index=0, iid=0,
-            value=('NET INCOME:', income_budget - expense_budget, income_actual - expense_actual),
+            value=(
+                'NET INCOME:',
+                round(expected_income - budgeted_expense, 2),
+                round(actual_income - actual_expense, 2)
+            ),
             tags=('header',)
         )
         self.net_income_tv.tag_configure("header", foreground="white", background="#4b707e")

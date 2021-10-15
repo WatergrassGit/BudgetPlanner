@@ -951,15 +951,12 @@ class SaveBudget:
 
         mask = [("CSV files", "*.csv"), ("All files", "*.*")]
 
-        fp = filedialog.asksaveasfilename(
+        self.filepath = filedialog.asksaveasfilename(
             title="Save Budget Group As",
             initialdir=self.master.data_model.budgets_path,
             initialfile="new_group.csv",
             filetypes=mask
         )
-
-        if fp:
-            self.callbacks["save_budget_group"](fp)
 
 
 class LoadBudget:

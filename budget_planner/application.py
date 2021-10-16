@@ -24,6 +24,8 @@ class Application(tk.Tk):
             "save_budget_group": self.save_budget_group,
             "overwrite_budget_group_warning": self.overwrite_budget_group_warning,
             "load_budget_group": self.load_budget_group,
+            "get_previous_budget": self.get_previous_budget,
+            "get_next_budget": self.get_next_budget,
         }
 
         # set up project model
@@ -80,8 +82,8 @@ class Application(tk.Tk):
         Returns user response as True or False.
         """
 
-        warning_class = v.OverwriteDirectory()
-        response = warning_class.call_messagebox(group_name)
+        warning_class = v.MessageView()
+        response = warning_class.directory_overwrite_messagebox(group_name)
         return response
 
     def load_budget_group(self):
@@ -94,3 +96,63 @@ class Application(tk.Tk):
             current_budget = self.data_model.template_data["current_budget"]
             self.budget_view.view_data = self.data_model.template_data['budgets'][current_budget]
             self.update_frames()
+
+    def get_previous_budget(self):
+        if self.data_model.template_data['type'] == 'template':
+            print("This is a template.")
+            return
+        current_budget = self.data_model.template_data['current_budget']
+        placement = self.data_model.template_data['order'].index(current_budget)
+        if placement > 0:
+            previous_budget = self.data_model.template_data['order'][placement - 1]
+        else:
+            print("There are no earlier budgets!")
+            return
+        self.data_model.template_data["current_budget"] = previous_budget
+        self.budget_view.view_data = self.data_model.template_data['budgets'][previous_budget]
+        self.update_frames()
+
+    def get_next_budget(self):
+        if self.data_model.template_data['type'] == 'template':
+            print("This is a template.")
+            return
+        current_budget = self.data_model.template_data['current_budget']
+        placement = self.data_model.template_data['order'].index(current_budget)
+        try:
+            next_budget = self.data_model.template_data['order'][placement + 1]
+            self.data_model.template_data["current_budget"] = next_budget
+            self.budget_view.view_data = self.data_model.template_data['budgets'][next_budget]
+            self.update_frames()
+        except IndexError:
+            warning_class = v.MessageView()
+            create_next_budget = warning_class.create_next_budget_messagebox()  # asks if we want to create a new budget
+            if create_next_budget:
+                v.AddNextBudget(self, self.callbacks, current_budget, self.create_new_budget)
+
+    def create_new_budget(self, new_budget, template='blank'):
+        """Uses view info to append a budget to the current budget group and then update the view."""
+
+        penultimate = self.data_model.template_data["current_budget"]
+
+        self.data_model.template_data["current_budget"] = new_budget
+        self.data_model.template_data["order"].append(new_budget)
+        if template == 'saved':  # currently set to blank
+            self.data_model.template_data['budgets'][new_budget] = {
+                'income_categories': [],
+                'expense_categories': [],
+                'transactions': [],
+            }
+        elif template == 'previous':
+            self.data_model.template_data['budgets'][new_budget] = {
+                'income_categories': self.data_model.template_data['budgets'][penultimate]['income_categories'],
+                'expense_categories': self.data_model.template_data['budgets'][penultimate]['expense_categories'],
+                'transactions': [],
+            }
+        else:  # default or when template='blank'
+            self.data_model.template_data['budgets'][new_budget] = {
+                'income_categories': [],
+                'expense_categories': [],
+                'transactions': [],
+            }
+        self.budget_view.view_data = self.data_model.template_data['budgets'][new_budget]
+        self.update_frames()

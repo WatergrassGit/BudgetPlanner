@@ -69,12 +69,12 @@ class BudgetView(ttk.Frame):
         previous_button = ttk.Button(
             bottom_frame,
             text="Previous",
-            command=self.get_previous_budget
+            command=self.callbacks["get_previous_budget"]
         )
         next_button = ttk.Button(
             bottom_frame,
             text="Next",
-            command=self.get_next_budget
+            command=self.callbacks["get_next_budget"]
         )
         self.h_scroll = ttk.Scrollbar(bottom_frame, orient=tk.HORIZONTAL)
 
@@ -787,78 +787,6 @@ class BudgetView(ttk.Frame):
         modify_button = ttk.Button(modify_window, text=button_text, command=call_update_frames)
         modify_button.grid(column=i, row=2, sticky='e')
 
-    def get_previous_budget(self):
-        if self.master.data_model.template_data['type'] == 'template':
-            print("This is a template.")
-            return
-        current_budget = self.master.data_model.template_data['current_budget']
-        placement = self.master.data_model.template_data['order'].index(current_budget)
-        if placement > 0:
-            previous_budget = self.master.data_model.template_data['order'][placement - 1]
-        else:
-            print("There are no earlier budgets!")
-            return
-        self.master.data_model.template_data["current_budget"] = previous_budget
-        self.view_data = self.master.data_model.template_data['budgets'][previous_budget]
-        self.update_frames()
-
-    def get_next_budget(self):
-        if self.master.data_model.template_data['type'] == 'template':
-            print("This is a template.")
-            return
-        current_budget = self.master.data_model.template_data['current_budget']
-        placement = self.master.data_model.template_data['order'].index(current_budget)
-        try:
-            next_budget = self.master.data_model.template_data['order'][placement + 1]
-            self.master.data_model.template_data["current_budget"] = next_budget
-            self.view_data = self.master.data_model.template_data['budgets'][next_budget]
-            self.update_frames()
-        except IndexError:
-            create_next_budget = messagebox.askyesno(
-                title="Add Next Budget",
-                message="There is no next budget!",
-                detail="Create it?"
-            )
-            if create_next_budget:
-                next_budget = current_budget
-                add_next_budget_window = tk.Toplevel(self)
-                add_next_budget_window.wm_title("Add Next Budget")
-
-                def gather_info():
-                    nonlocal next_budget
-
-                    next_budget = next_name.get()
-
-                    if next_budget in self.master.data_model.template_data["order"]:
-                        messagebox.showerror(
-                            title="Name Error",
-                            message="Budget name already in use!",
-                            detail="Choose another name."
-                        )
-                    else:
-                        self.master.data_model.template_data["current_budget"] = next_budget
-                        self.master.data_model.template_data["order"].append(next_budget)
-                        self.master.data_model.template_data['budgets'][next_budget] = {
-                            'income_categories': [],
-                            'expense_categories': [],
-                            'transactions': [],
-                        }
-                        self.view_data = self.master.data_model.template_data['budgets'][next_budget]
-                        self.update_frames()
-                        add_next_budget_window.destroy()
-                        add_next_budget_window.update()
-
-                label = ttk.Label(add_next_budget_window, text="Next Budget Name")
-                next_name = ttk.Entry(add_next_budget_window)
-                next_name_submit = ttk.Button(add_next_budget_window, text="Submit", command=gather_info)
-
-                label.grid(column=0)
-                next_name.grid(column=1)
-                next_name_submit.grid(column=2)
-
-            else:
-                return
-
     def set_styles(self):
         #self.styles.theme_use('clam')
         self.styles.configure('mystyle.Treeview', highlightthickness=0, bd=0, font=('Calibri', 11))
@@ -978,13 +906,63 @@ class LoadBudget:
         )
 
 
-class OverwriteDirectory:
-    """Class containing function which calls a popup window asking if the user wants to overwrite a directory."""
+class MessageView:
+    """Class containing messages which are called outside of main view."""
 
     @staticmethod
-    def call_messagebox(directory_name):
+    def directory_overwrite_messagebox(directory_name):
         return messagebox.askokcancel(
             title="Directory Exists",
             message=f"A directory called {directory_name} already exists!",
             detail="Do you want to overwrite?"
         )
+
+    @staticmethod
+    def create_next_budget_messagebox():
+        return messagebox.askyesno(
+            title="Add Next Budget",
+            message="There is no next budget!",
+            detail="Create it?"
+        )
+
+
+class AddNextBudget(tk.Toplevel):
+    """ """
+
+    def __init__(self, master, callbacks, current, add_budget_func, *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+
+        self.callbacks = callbacks
+        self.master = master
+        self.newest_budget = current
+        self.add_budget_func = add_budget_func
+
+        self.wm_title("Add Next Budget")
+
+        self.label = ttk.Label(self, text="Next Budget Name")
+        self.next_name = ttk.Entry(self)
+        self.next_name_submit = ttk.Button(self, text="Submit", command=self.gather_info)
+
+        self.label.grid(column=0)
+        self.next_name.grid(column=1)
+        self.next_name_submit.grid(column=2)
+
+    def gather_info(self):
+        self.newest_budget = self.next_name.get()
+
+        if self.newest_budget in self.master.data_model.template_data["order"]:
+            messagebox.showerror(
+                title="Name Error",
+                message="Budget name already in use!",
+                detail="Choose another name."
+            )
+        elif self.newest_budget == '':
+            messagebox.showerror(
+                title="Name Error",
+                message="Budget name must be at least one character long!",
+                detail="Choose another name."
+            )
+        else:
+            self.add_budget_func(self.newest_budget, template='previous')
+            self.destroy()
+            self.update()

@@ -937,15 +937,28 @@ class AddNextBudget(tk.Toplevel):
         self.newest_budget = current
         self.add_budget_func = add_budget_func
 
-        self.wm_title("Add Next Budget")
+        self.wm_title("Add Budget")
 
-        self.label = ttk.Label(self, text="Next Budget Name")
+        # create widgets
+        self.name_label = ttk.Label(self, text="Budget Name: ")
         self.next_name = ttk.Entry(self)
+        self.radiobutton_label = ttk.Label(self, text="Template: ")
+
+        self.rbs = tk.StringVar(value='previous')
+        self.blank_rb = ttk.Radiobutton(self, text="Blank", variable=self.rbs, value="blank")
+        self.previous_rb = ttk.Radiobutton(self, text="Previous", variable=self.rbs, value="previous")
+        self.saved_rb = ttk.Radiobutton(self, text="Saved", variable=self.rbs, value="saved")
+
         self.next_name_submit = ttk.Button(self, text="Submit", command=self.gather_info)
 
-        self.label.grid(column=0)
-        self.next_name.grid(column=1)
-        self.next_name_submit.grid(column=2)
+        # grid widgets
+        self.name_label.grid(column=0, row=0, sticky='w')
+        self.next_name.grid(column=1, row=0)
+        self.radiobutton_label.grid(column=0, row=1, sticky='w')
+        self.blank_rb.grid(column=1, row=1, sticky='w')
+        self.previous_rb.grid(column=1, row=2, sticky='w')
+        self.saved_rb.grid(column=1, row=3, sticky='w')
+        self.next_name_submit.grid(column=1, row=4, sticky='e')
 
     def gather_info(self):
         self.newest_budget = self.next_name.get()
@@ -963,6 +976,6 @@ class AddNextBudget(tk.Toplevel):
                 detail="Choose another name."
             )
         else:
-            self.add_budget_func(self.newest_budget, template='previous')
+            self.add_budget_func(self.newest_budget, template=self.rbs.get())
             self.destroy()
             self.update()

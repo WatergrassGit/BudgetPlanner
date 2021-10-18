@@ -78,9 +78,13 @@ class Application(tk.Tk):
 
     def save_budget_group(self):
         """Opens dialog to select name and location to save budget group. Then sends filepath to model to save."""
-        sb = v.SaveBudget(self, self.callbacks)
-        if sb.filepath:
-            self.data_model.save_budget_group(sb.filepath)
+
+        initial_dir = self.data_model.budgets_path
+        self.data_model.initiate_directory(initial_dir)
+
+        sbg = v.SaveBudgetGroup(self, self.callbacks, initial_dir)
+        if sbg.filepath:
+            self.data_model.save_budget_grouping_as(sbg.filepath)
 
     @staticmethod
     def overwrite_budget_group_warning(group_name):
@@ -94,6 +98,26 @@ class Application(tk.Tk):
         return response
 
     def load_budget_group(self):
+        """Creates class for user to select budget grouping and then tries to open requested budget grouping."""
+
+        initial_dir = self.data_model.budgets_path
+        self.data_model.initiate_directory(initial_dir)
+
+        lbg = v.LoadBudgetGroup(self, self.callbacks, initial_dir)
+        if lbg.filepath:
+            budget = self.data_model.load_template(lbg.filepath)
+            if budget == 'loading_error':
+                print('failure to load. wrong file type')
+            else:
+                if budget.get('type') == 'budget':
+                    self.data_model.template_data = budget
+                    current_budget = self.data_model.template_data["current_budget"]
+                    self.budget_view.view_data = budget['budgets'][current_budget]
+                    self.update_frames()
+                else:
+                    print('not a budget')
+
+    def load_budget_group_old(self):
         """Creates class for user to select budget grouping and then tries to open requested budget grouping."""
         lb = v.LoadBudget(self, self.callbacks)
         success = False

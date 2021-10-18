@@ -182,6 +182,12 @@ class ProjectModel:
 
         return {"income_categories": lods[0], "expense_categories": lods[1], "transactions": lods[2]}
 
+    def save_budget_grouping_as(self, fp):
+        """Save a budget grouping as a named Pickle file."""
+
+        with open(fp, 'wb') as f:
+            pickle.dump(self.template_data, f)
+
     def save_budget_group(self, filepath):
         """Allows user to save a budget grouping to a directory."""
 

@@ -999,6 +999,26 @@ class SaveTemplate:
         )
 
 
+class SaveBudgetGroup:
+    """Class which has pop-up window with options for user to save a budget group."""
+
+    def __init__(self, master, callbacks, initial_dir, *args, **kwargs):
+        self.callbacks = callbacks
+        self.master = master
+        self.initial_dir = initial_dir
+
+        self.master.data_model.initiate_directory(self.master.data_model.budgets_path)
+
+        mask = [("Pickle files", "*.pkl"), ("All files", "*.*")]
+
+        self.filepath = filedialog.asksaveasfilename(
+            title="Save Budget Grouping As",
+            initialdir=self.master.data_model.budgets_path,
+            initialfile="new_group.pkl",
+            filetypes=mask
+        )
+
+
 class LoadTemplate:
     """Class which has pop-up window allowing user to select a pickle file pointing to a template to load."""
 
@@ -1012,5 +1032,22 @@ class LoadTemplate:
         self.filepath = filedialog.askopenfilename(
             title="Load Template",
             initialdir=initial_dir,
+            filetypes=mask
+        )
+
+
+class LoadBudgetGroup:
+    """Class which has pop-up window allowing user to select a Pickle file containing a budget group to load."""
+
+    def __init__(self, master, callbacks, initial_dir, *args, **kwargs):
+        self.callbacks = callbacks
+        self.master = master
+        self.initial_dir = initial_dir
+
+        mask = [("Pickle files", "*.pkl"), ("All files", "*.*")]
+
+        self.filepath = filedialog.askopenfilename(
+            title="Load Budget Group",
+            initialdir=self.initial_dir,
             filetypes=mask
         )

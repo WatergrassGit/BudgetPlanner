@@ -2,6 +2,7 @@ import os
 import shutil
 import csv
 import json
+import pickle
 import pandas as pd
 from decimal import Decimal
 from pathlib import Path
@@ -106,7 +107,12 @@ class ProjectModel:
         except FileExistsError:
             pass
 
-    def save_template_as(self):
+    def save_template_as(self, fp):
+        """Save current budget template as named pickle binary file."""
+        with open(fp, 'wb') as f:
+            pickle.dump(self.template_data, f)
+
+    def save_template_as_csv(self):
         """Save current budget as a template."""
 
         self.initiate_directory(self.templates_path)
@@ -118,6 +124,16 @@ class ProjectModel:
             df = pd.DataFrame(self.template_data['template'][data_groups[i]])
             filepath = Path(self.templates_path, 'default_template', file_names[i])
             df.to_csv(filepath, index=False)
+
+    @staticmethod
+    def load_template(fp):
+        """Load template from a given directory."""
+        with open(fp, 'rb') as f:
+            try:
+                template = pickle.load(f)
+            except pickle.UnpicklingError:
+                template = 'loading_error'
+        return template
 
     def load_active_template(self):
         """Load currently active budget template"""
@@ -216,9 +232,9 @@ class ProjectModel:
             # it then removed any subdirectories which are no longer represented in the budget group
             # this could happen as a result of renaming a budget or replacing an entire budget group
             dirlist = [item for item in os.listdir(budget_group_path) if os.path.isdir(Path(budget_group_path, item))]
-            for dir in dirlist:
-                if dir not in [d['dirname'] for d in order_lod]:
-                    shutil.rmtree(Path(budget_group_path, dir))
+            for dir_ in dirlist:
+                if dir_ not in [d['dirname'] for d in order_lod]:
+                    shutil.rmtree(Path(budget_group_path, dir_))
 
     def load_budget_group(self, filepath):
         """

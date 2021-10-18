@@ -979,3 +979,38 @@ class AddNextBudget(tk.Toplevel):
             self.add_budget_func(self.newest_budget, template=self.rbs.get())
             self.destroy()
             self.update()
+
+
+class SaveTemplate:
+    """Class which has pop-up window with options for user to save a budget template."""
+
+    def __init__(self, master, callbacks, initial_dir, *args, **kwargs):
+        self.callbacks = callbacks
+        self.master = master
+        self.initial_dir = initial_dir
+
+        mask = [("Pickle files", "*.pkl"), ("All files", "*.*")]
+
+        self.filepath = filedialog.asksaveasfilename(
+            title="Save Template As",
+            initialdir=self.initial_dir,
+            initialfile="template.pkl",
+            filetypes=mask
+        )
+
+
+class LoadTemplate:
+    """Class which has pop-up window allowing user to select a pickle file pointing to a template to load."""
+
+    def __init__(self, master, callbacks, initial_dir, *args, **kwargs):
+        self.callbacks = callbacks
+        self.master = master
+        self.initial_dir = initial_dir
+
+        mask = [("Pickle files", "*.pkl"), ("All files", "*.*")]
+
+        self.filepath = filedialog.askopenfilename(
+            title="Load Template",
+            initialdir=initial_dir,
+            filetypes=mask
+        )

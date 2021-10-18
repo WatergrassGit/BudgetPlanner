@@ -26,6 +26,7 @@ class Application(tk.Tk):
             "load_budget_group": self.load_budget_group,
             "get_previous_budget": self.get_previous_budget,
             "get_next_budget": self.get_next_budget,
+            "load_template": self.load_template,
         }
 
         # set up project model
@@ -44,8 +45,14 @@ class Application(tk.Tk):
         self.grid_columnconfigure(0, weight=1)
 
     def save_template_as(self):
-        """Wrapper to call save_template_as method from data_model."""
-        self.data_model.save_template_as()
+        """Gets filepath and filename needed for saving a template. Finally calls function to save template."""
+
+        initial_dir = self.data_model.templates_path
+        self.data_model.initiate_directory(initial_dir)
+
+        st = v.SaveTemplate(self, self.callbacks, initial_dir)
+        if st.filepath:
+            self.data_model.save_template_as(st.filepath)
 
     def get_template_data(self):
         """Wrapper to call get_template_data method from data_model."""
@@ -156,3 +163,22 @@ class Application(tk.Tk):
             }
         self.budget_view.view_data = self.data_model.template_data['budgets'][new_budget]
         self.update_frames()
+
+    def load_template(self):
+        """Get filepath and filename of template. Finally, load the template"""
+
+        initial_dir = self.data_model.templates_path
+        self.data_model.initiate_directory(initial_dir)
+
+        lt = v.LoadTemplate(self, self.callbacks, initial_dir)
+        if lt.filepath:
+            template = self.data_model.load_template(lt.filepath)
+            if template == 'loading_error':
+                print('failure to load. wrong file type')
+            else:
+                if template.get('type') == 'template':
+                    self.data_model.template_data = template
+                    self.budget_view.view_data = template['template']
+                    self.update_frames()
+                else:
+                    print('not a template')

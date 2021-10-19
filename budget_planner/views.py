@@ -148,18 +148,21 @@ class BudgetView(ttk.Frame):
         self.editable_category_column_datatypes = [str, Decimal]
         self.category_entry_widgets = [RequiredEntry, DollarEntry]
         self.category_column_widths = (0, 160, 80, 80)
+        self.category_column_orientations = ('w', 'w', 'e', 'e')
 
         self.job_column_names = ('#0', 'name', 'hourly_pay', 'hours', 'tax_rate', 'wages')
         self.editable_job_column_names = self.job_column_names[1:5]
         self.editable_job_column_datatypes = [str, Decimal, Decimal, Decimal]
         self.job_entry_widgets = [RequiredEntry, DollarEntry, DollarEntry, DecimalEntry]
         self.job_column_widths = (0, 80, 80, 50, 70, 60)
+        self.job_column_orientations = ('w', 'w', 'e', 'e', 'e', 'e')
 
         self.transaction_column_names = ('#0', 'date', 'merchant', 'category', 'outlay', 'inflow', 'net')
         self.editable_transaction_column_names = self.transaction_column_names[1:6]
         self.editable_transaction_column_datatypes = [str, str, str, Decimal, Decimal]
         self.transaction_entry_widgets = [DateEntry, RequiredEntry, RequiredEntry, DollarEntry, DollarEntry]
         self.transaction_column_widths = (0, 80, 160, 160, 80, 80, 80)
+        self.transaction_column_orientations = ('w', 'w', 'w', 'w', 'e', 'e', 'e')
 
         self.update_frames()
 
@@ -232,7 +235,8 @@ class BudgetView(ttk.Frame):
 
         column_names = self.category_column_names
         column_widths = self.category_column_widths
-        column_dictionary = dict(zip(column_names, column_widths))
+        column_orientations = self.category_column_orientations
+        column_list = list(zip(column_names, column_widths, column_orientations))
 
         # set new names for data in view_data
         income_categories = self.view_data['income_categories']
@@ -241,8 +245,8 @@ class BudgetView(ttk.Frame):
 
         # add content to income treeview header
         self.income_tv_header.config(columns=column_names[1:], selectmode='none', height=1)
-        for k, v in column_dictionary.items():
-            self.income_tv_header.column(k, width=v, stretch='NO')
+        for v in column_list:
+            self.income_tv_header.column(v[0], width=v[1], stretch='NO', anchor=v[2])
         self.income_tv_header.insert(
             parent='', index=0, iid=0,
             value=('---INCOME---', 'Expected', 'Actual'),
@@ -252,8 +256,8 @@ class BudgetView(ttk.Frame):
 
         # add content to income treeview body
         self.income_tv.config(columns=column_names[1:], selectmode='browse')
-        for k, v in column_dictionary.items():
-            self.income_tv.column(k, width=v, stretch='NO')
+        for v in column_list:
+            self.income_tv.column(v[0], width=v[1], stretch='NO', anchor=v[2])
 
         # initialize variables
         actual_income = Decimal('0')
@@ -279,7 +283,7 @@ class BudgetView(ttk.Frame):
         if uncategorized_income > 0:
             income_category_totals['Uncategorized'] = dict(expected=Decimal('0'), actual=uncategorized_income)
 
-        expected_income = sum([v['expected'] for v in income_category_totals.values()])
+        expected_income = Decimal(sum([v['expected'] for v in income_category_totals.values()]))
         income_category_totals['SUBTOTAL'] = dict(expected=expected_income, actual=actual_income)
 
         for index, (k, v) in enumerate(income_category_totals.items()):
@@ -291,7 +295,7 @@ class BudgetView(ttk.Frame):
                 parent='',
                 index=index,
                 iid=index,
-                values=(k, round(v['expected'], 2), v['actual']),
+                values=(k, round(v['expected'], 2), round(v['actual'], 2)),
                 tags=(parity,)
             )
         # add colors based on tag
@@ -302,8 +306,8 @@ class BudgetView(ttk.Frame):
 
         # add content to expense treeview header
         self.expense_tv_header.config(columns=column_names[1:], selectmode='none', height=1)
-        for k, v in column_dictionary.items():
-            self.expense_tv_header.column(k, width=v, stretch='NO')
+        for v in column_list:
+            self.expense_tv_header.column(v[0], width=v[1], stretch='NO', anchor=v[2])
 
         self.expense_tv_header.insert(
             parent='', index=0, iid=0,
@@ -314,8 +318,8 @@ class BudgetView(ttk.Frame):
 
         # add content to expense treeview body
         self.expense_tv.config(columns=column_names[1:], selectmode='browse', height=20)
-        for k, v in column_dictionary.items():
-            self.expense_tv.column(k, width=v, stretch='NO')
+        for v in column_list:
+            self.expense_tv.column(v[0], width=v[1], stretch='NO', anchor=v[2])
 
         # add user rows to expense_treeview based on given categories
         actual_expense = Decimal('0')
@@ -341,14 +345,16 @@ class BudgetView(ttk.Frame):
                 else:
                     uncategorized_expense += outlay
 
-        budgeted_income_taxes = sum([ic['hourly_pay'] * ic['hours'] * ic['tax_rate'] for ic in income_categories])
+        budgeted_income_taxes = Decimal(
+            sum([ic['hourly_pay'] * ic['hours'] * ic['tax_rate'] for ic in income_categories])
+        )
         expense_category_totals['Income Tax'] = dict(budget=budgeted_income_taxes, actual=taxed_income)
 
         # determine whether to display uncategorized expense row
         if uncategorized_expense > 0:
             expense_category_totals['Uncategorized'] = dict(budget=Decimal('0'), actual=uncategorized_expense)
 
-        budgeted_expense = sum([v['budget'] for v in expense_category_totals.values()])
+        budgeted_expense = Decimal(sum([v['budget'] for v in expense_category_totals.values()]))
         expense_category_totals['SUBTOTAL'] = dict(budget=budgeted_expense, actual=actual_expense)
 
         for index, (k, v) in enumerate(expense_category_totals.items()):
@@ -360,7 +366,7 @@ class BudgetView(ttk.Frame):
                 parent='',
                 index=index,
                 iid=index,
-                values=(k, round(v['budget'], 2), v['actual']),
+                values=(k, round(v['budget'], 2), round(v['actual'], 2)),
                 tags=(parity,)
             )
 
@@ -372,8 +378,8 @@ class BudgetView(ttk.Frame):
 
         # set up treeview to aggregate income and expense totals
         self.net_income_tv.config(columns=column_names[1:], selectmode='none', height=1)
-        for k, v in column_dictionary.items():
-            self.net_income_tv.column(k, width=v, stretch='NO')
+        for v in column_list:
+            self.net_income_tv.column(v[0], width=v[1], stretch='NO', anchor=v[2])
         self.net_income_tv.insert(
             parent='', index=0, iid=0,
             value=(
@@ -391,16 +397,16 @@ class BudgetView(ttk.Frame):
         # set up general variables
         column_names = self.job_column_names
         column_widths = self.job_column_widths
-
-        column_dictionary = dict(zip(column_names, column_widths))
+        column_orientations = self.job_column_orientations
+        column_list = list(zip(column_names, column_widths, column_orientations))
 
         # set new names for data in template_data
         jobs = self.view_data['income_categories']
 
         # add content to middle treeview header
         self.middle_tv_header.config(columns=column_names[1:], selectmode='none', height=1)
-        for k, v in column_dictionary.items():
-            self.middle_tv_header.column(k, width=v, stretch='NO')
+        for v in column_list:
+            self.middle_tv_header.column(v[0], width=v[1], stretch='NO', anchor=v[2])
 
         self.middle_tv_header.insert(
             parent='', index=0, iid=0,
@@ -411,8 +417,8 @@ class BudgetView(ttk.Frame):
 
         # add content to middle treeview
         self.middle_tv.config(columns=column_names[1:], selectmode='browse', height=20)
-        for k, v in column_dictionary.items():
-            self.middle_tv.column(k, width=v, stretch='NO')
+        for v in column_list:
+            self.middle_tv.column(v[0], width=v[1], stretch='NO', anchor=v[2])
 
         for index, value in enumerate(jobs):
             if index % 2 == 0:
@@ -425,9 +431,9 @@ class BudgetView(ttk.Frame):
                 iid=index,
                 values=(
                     value['name'],
-                    value['hourly_pay'],
-                    value['hours'],
-                    value['tax_rate'],
+                    round(value['hourly_pay'], 2),
+                    round(value['hours'], 2),
+                    round(value['tax_rate'], 2),
                     round(value['hourly_pay'] * value['hours'], 2)
                 ),
                 tags=(parity,)
@@ -443,15 +449,16 @@ class BudgetView(ttk.Frame):
         # set up transaction column names and widths
         column_names = self.transaction_column_names
         column_widths = self.transaction_column_widths
-        column_dictionary = dict(zip(column_names, column_widths))
+        column_orientations = self.transaction_column_orientations
+        column_list = list(zip(column_names, column_widths, column_orientations))
 
         # set new name(s) for data in template_data
         transactions = self.view_data['transactions']
 
         # add content to transaction treeview header
         self.transaction_tv_header.config(columns=column_names[1:], selectmode='none', height=1)
-        for k, v in column_dictionary.items():
-            self.transaction_tv_header.column(k, width=v, stretch='NO')
+        for v in column_list:
+            self.transaction_tv_header.column(v[0], width=v[1], stretch='NO', anchor=v[2])
 
         self.transaction_tv_header.insert(
             parent='', index=0, iid=0,
@@ -462,8 +469,8 @@ class BudgetView(ttk.Frame):
 
         # add content to transaction treeview
         self.transaction_tv.config(columns=column_names[1:], selectmode='browse', height=20)
-        for k, v in column_dictionary.items():
-            self.transaction_tv.column(k, width=v, stretch='NO')
+        for v in column_list:
+            self.transaction_tv.column(v[0], width=v[1], stretch='NO', anchor=v[2])
 
         for index, value in enumerate(transactions):
             if index % 2 == 0:
@@ -478,9 +485,9 @@ class BudgetView(ttk.Frame):
                     value['date'],
                     value['merchant'],
                     value['category'],
-                    value['outlay'],
-                    value['inflow'],
-                    value['inflow'] - value['outlay']
+                    round(value['outlay'], 2),
+                    round(value['inflow'], 2),
+                    round(value['inflow'] - value['outlay'], 2)
                 ),
                 tags=(parity,)
             )

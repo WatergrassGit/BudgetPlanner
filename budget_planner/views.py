@@ -1019,35 +1019,22 @@ class SaveBudgetGroup:
         )
 
 
-class LoadTemplate:
-    """Class which has pop-up window allowing user to select a pickle file pointing to a template to load."""
-
-    def __init__(self, master, callbacks, initial_dir, *args, **kwargs):
-        self.callbacks = callbacks
-        self.master = master
-        self.initial_dir = initial_dir
-
-        mask = [("Pickle files", "*.pkl"), ("All files", "*.*")]
-
-        self.filepath = filedialog.askopenfilename(
-            title="Load Template",
+class SavePickle:
+    """Class which has pop-up window allowing user to save a file in Pickle format."""
+    def __init__(self, initial_dir, filename, title, mask, *args, **kwargs):
+        self.filepath = filedialog.asksaveasfilename(
+            title=title,
             initialdir=initial_dir,
+            initialfile=filename,
             filetypes=mask
         )
 
 
-class LoadBudgetGroup:
-    """Class which has pop-up window allowing user to select a Pickle file containing a budget group to load."""
-
-    def __init__(self, master, callbacks, initial_dir, *args, **kwargs):
-        self.callbacks = callbacks
-        self.master = master
-        self.initial_dir = initial_dir
-
-        mask = [("Pickle files", "*.pkl"), ("All files", "*.*")]
-
+class LoadPickle:
+    """Class which has pop-up window allowing user to select a Pickle file to load."""
+    def __init__(self, initial_dir, title, mask, *args, **kwargs):
         self.filepath = filedialog.askopenfilename(
-            title="Load Budget Group",
-            initialdir=self.initial_dir,
+            title=title,
+            initialdir=initial_dir,
             filetypes=mask
         )

@@ -21,9 +21,9 @@ class Application(tk.Tk):
             "create_budget": self.create_budget,
             "update_frames": self.update_frames,
             "add_job": self.add_job,
-            "save_budget_group": self.save_budget_group,
+            "save_budget_as": self.save_budget_as,
             "overwrite_budget_group_warning": self.overwrite_budget_group_warning,
-            "load_budget_group": self.load_budget_group,
+            "load_budget": self.load_budget,
             "get_previous_budget": self.get_previous_budget,
             "get_next_budget": self.get_next_budget,
             "load_template": self.load_template,
@@ -45,14 +45,29 @@ class Application(tk.Tk):
         self.grid_columnconfigure(0, weight=1)
 
     def save_template_as(self):
-        """Gets filepath and filename needed for saving a template. Finally calls function to save template."""
-
+        """Sends basic template information to save_as for further processing."""
         initial_dir = self.data_model.templates_path
-        self.data_model.initiate_directory(initial_dir)
+        self.save_as(initial_dir=initial_dir, filename="new_template.pkl", file_type="template")
 
-        st = v.SaveTemplate(self, self.callbacks, initial_dir)
-        if st.filepath:
-            self.data_model.save_template_as(st.filepath)
+    def save_budget_as(self):
+        """Sends basic budget information to save_as for further processing."""
+        initial_dir = self.data_model.budgets_path
+        self.save_as(initial_dir=initial_dir, filename="new_budget.pkl", file_type="budget")
+
+    def save_as(self, initial_dir, filename, file_type):
+        """Save template or budget."""
+
+        # before finalizing the save operations ensure we are saving the correct type of data
+        if self.data_model.template_data.get('type') == file_type:
+            self.data_model.initiate_directory(initial_dir)
+            mask = [("Pickle files", "*.pkl"), ("All files", "*.*")]
+            title = f"Save {file_type.title()} As"
+
+            sp = v.SavePickle(initial_dir, filename=filename, title=title, mask=mask)
+            if sp.filepath:
+                self.data_model.save_as_pickle(sp.filepath)
+        else:
+            print(f"Your data is not of type {file_type}!")
 
     def get_template_data(self):
         """Wrapper to call get_template_data method from data_model."""
@@ -76,16 +91,6 @@ class Application(tk.Tk):
     def update_frames(self):
         self.budget_view.update_frames()
 
-    def save_budget_group(self):
-        """Opens dialog to select name and location to save budget group. Then sends filepath to model to save."""
-
-        initial_dir = self.data_model.budgets_path
-        self.data_model.initiate_directory(initial_dir)
-
-        sbg = v.SaveBudgetGroup(self, self.callbacks, initial_dir)
-        if sbg.filepath:
-            self.data_model.save_budget_grouping_as(sbg.filepath)
-
     @staticmethod
     def overwrite_budget_group_warning(group_name):
         """
@@ -97,25 +102,38 @@ class Application(tk.Tk):
         response = warning_class.directory_overwrite_messagebox(group_name)
         return response
 
-    def load_budget_group(self):
-        """Creates class for user to select budget grouping and then tries to open requested budget grouping."""
+    def load_template(self):
+        initial_dir = self.data_model.templates_path
+        self.load(initial_dir=initial_dir, file_type='template')
 
+    def load_budget(self):
         initial_dir = self.data_model.budgets_path
-        self.data_model.initiate_directory(initial_dir)
+        self.load(initial_dir=initial_dir, file_type='budget')
 
-        lbg = v.LoadBudgetGroup(self, self.callbacks, initial_dir)
-        if lbg.filepath:
-            budget = self.data_model.load_template(lbg.filepath)
-            if budget == 'loading_error':
-                print('failure to load. wrong file type')
+    def load(self, initial_dir, file_type):
+        """Load template or budget."""
+
+        self.data_model.initiate_directory(initial_dir)
+        mask = [("Pickle files", "*.pkl"), ("All files", "*.*")]
+        title = f"Load {file_type.title()}"
+
+        lp = v.LoadPickle(initial_dir, title, mask)
+        if lp.filepath:
+            result = self.data_model.load_pickle(lp.filepath)
+            if result == 'loading_error':
+                print('Failure to load. Wrong file type.')
             else:
-                if budget.get('type') == 'budget':
-                    self.data_model.template_data = budget
+                if result.get('type', '') == file_type == 'template':
+                    self.data_model.template_data = result
+                    self.budget_view.view_data = result['template']
+                    self.update_frames()
+                elif result.get('type', '') == file_type == 'budget':
+                    self.data_model.template_data = result
                     current_budget = self.data_model.template_data["current_budget"]
-                    self.budget_view.view_data = budget['budgets'][current_budget]
+                    self.budget_view.view_data = result['budgets'][current_budget]
                     self.update_frames()
                 else:
-                    print('not a budget')
+                    print(f'Not a {file_type}.')
 
     def load_budget_group_old(self):
         """Creates class for user to select budget grouping and then tries to open requested budget grouping."""
@@ -187,22 +205,3 @@ class Application(tk.Tk):
             }
         self.budget_view.view_data = self.data_model.template_data['budgets'][new_budget]
         self.update_frames()
-
-    def load_template(self):
-        """Get filepath and filename of template. Finally, load the template"""
-
-        initial_dir = self.data_model.templates_path
-        self.data_model.initiate_directory(initial_dir)
-
-        lt = v.LoadTemplate(self, self.callbacks, initial_dir)
-        if lt.filepath:
-            template = self.data_model.load_template(lt.filepath)
-            if template == 'loading_error':
-                print('failure to load. wrong file type')
-            else:
-                if template.get('type') == 'template':
-                    self.data_model.template_data = template
-                    self.budget_view.view_data = template['template']
-                    self.update_frames()
-                else:
-                    print('not a template')

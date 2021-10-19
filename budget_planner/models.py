@@ -107,8 +107,8 @@ class ProjectModel:
         except FileExistsError:
             pass
 
-    def save_template_as(self, fp):
-        """Save current budget template as named pickle binary file."""
+    def save_as_pickle(self, fp):
+        """Save current budget or template as named pickle binary file."""
         with open(fp, 'wb') as f:
             pickle.dump(self.template_data, f)
 
@@ -126,14 +126,14 @@ class ProjectModel:
             df.to_csv(filepath, index=False)
 
     @staticmethod
-    def load_template(fp):
-        """Load template from a given directory."""
+    def load_pickle(fp):
+        """Load budget or template from a given directory."""
         with open(fp, 'rb') as f:
             try:
-                template = pickle.load(f)
+                result = pickle.load(f)
             except pickle.UnpicklingError:
-                template = 'loading_error'
-        return template
+                result = 'loading_error'
+        return result
 
     def load_active_template(self):
         """Load currently active budget template"""
@@ -181,12 +181,6 @@ class ProjectModel:
             lods.append(df.to_dict('records'))
 
         return {"income_categories": lods[0], "expense_categories": lods[1], "transactions": lods[2]}
-
-    def save_budget_grouping_as(self, fp):
-        """Save a budget grouping as a named Pickle file."""
-
-        with open(fp, 'wb') as f:
-            pickle.dump(self.template_data, f)
 
     def save_budget_group(self, filepath):
         """Allows user to save a budget grouping to a directory."""

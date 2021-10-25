@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from . import views as v
 from . import menus
-from . models import ProjectModel
+from . models import ProjectModel, ProjectSettings
 
 
 class Application(tk.Tk):
@@ -10,8 +10,11 @@ class Application(tk.Tk):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.settings = ProjectSettings(self)
+
         self.wm_title("Budget Planner")
-        self.geometry("1280x720")
+        self.geometry(self.settings.settings['window_size'])
 
         # set up callback dictionary
         self.callbacks = {
@@ -27,6 +30,7 @@ class Application(tk.Tk):
             "get_previous_budget": self.get_previous_budget,
             "get_next_budget": self.get_next_budget,
             "load_template": self.load_template,
+            "set_window_size": self.set_window_size,
         }
 
         # set up project model
@@ -43,6 +47,13 @@ class Application(tk.Tk):
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
+
+        self.update_settings_file()
+
+    def update_settings_file(self):
+        self.settings.update_settings_file()
+        # rerun every 5000 milliseconds
+        self.after(5000, self.update_settings_file)
 
     def save_template_as(self):
         """Sends basic template information to save_as for further processing."""
@@ -205,3 +216,6 @@ class Application(tk.Tk):
             }
         self.budget_view.view_data = self.data_model.template_data['budgets'][new_budget]
         self.update_frames()
+
+    def set_window_size(self, width, height):
+        self.settings.set_window_size(width, height)

@@ -176,6 +176,8 @@ class BudgetView(ttk.Frame):
         self.middle_tv.bind("<Button-3>", self.call_job_popup_menu)
         self.transaction_tv.bind("<Button-3>", self.call_transaction_popup_menu)
 
+        self.bind("<Configure>", self.resize)
+
     def get_canvas_size(self, *args):
         _, _, self.canvas_width, self.canvas_height = self.canvas.bbox('all')
         self.canvas.configure(scrollregion=self.canvas.bbox('all'),
@@ -816,6 +818,9 @@ class BudgetView(ttk.Frame):
 
         self.transaction_tv_header.configure(style="mystyle.Treeview")
         self.transaction_tv.configure(style="mystyle.Treeview")
+
+    def resize(self, event):
+        self.callbacks['set_window_size'](event.width, event.height)
 
 
 class CreateBudget(tk.Toplevel):

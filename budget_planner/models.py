@@ -6,6 +6,7 @@ import pickle
 import pandas as pd
 from decimal import Decimal
 from pathlib import Path
+import threading
 
 
 class ProjectModel:
@@ -280,3 +281,42 @@ class ProjectModel:
         self.template_data = data
 
         return True  # represents load was successful
+
+
+class ProjectSettings:
+    """Class to hold project settings. Uses default values whenever no other value found."""
+
+    def __init__(self, master):
+        self.master = master
+
+        self.settings_changed = False
+        self.settings_path = Path("budget_planner", "settings.json")
+
+        try:  # initiate settings from file or with empty dictionary as needed
+            with open(self.settings_path, mode='r') as json_file:
+                self.settings = json.load(json_file)
+        except FileNotFoundError:
+            self.settings = {}
+
+        self.settings.setdefault('window_size', '1280x720')
+
+    def set_window_size(self, width, height):
+        self.settings_changed = self.settings['window_size'] != f"{width}x{height}"
+        if self.settings_changed:
+            self.settings['window_size'] = f"{width}x{height}"
+            self.settings_changed = True
+
+    def update_settings_file(self):
+        if not os.path.exists(self.settings_path):
+            thread = threading.Thread(target=self._save_settings)
+            thread.start()
+            self.settings_changed = False
+        else:
+            if self.settings_changed:
+                thread = threading.Thread(target=self._save_settings)
+                thread.start()
+                self.settings_changed = False
+
+    def _save_settings(self):
+        with open(self.settings_path, mode='w') as json_file:
+            json.dump(self.settings, json_file)

@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+import copy
 from . import views as v
 from . import menus
 from . models import ProjectModel, ProjectSettings
@@ -204,8 +205,10 @@ class Application(tk.Tk):
             }
         elif template == 'previous':
             self.data_model.template_data['budgets'][new_budget] = {
-                'income_categories': self.data_model.template_data['budgets'][penultimate]['income_categories'],
-                'expense_categories': self.data_model.template_data['budgets'][penultimate]['expense_categories'],
+                'income_categories': copy.deepcopy(
+                    self.data_model.template_data['budgets'][penultimate]['income_categories']),
+                'expense_categories': copy.deepcopy(
+                    self.data_model.template_data['budgets'][penultimate]['expense_categories']),
                 'transactions': [],
             }
         else:  # default or when template='blank'

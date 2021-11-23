@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import ttk
 from datetime import datetime
 import decimal
+from PIL import Image, ImageTk
+from .images import IM_TRISTATE, IM_UNCHECKED, IM_CHECKED
 
 
 class AutoScrollbar(ttk.Scrollbar):
@@ -259,3 +261,54 @@ class RequiredEntry(ValidatedMixin, ttk.Entry):
             self.error.set('A value is required')
             valid = False
         return valid
+
+
+class ModifiedCheckboxTreeview(ttk.Treeview):
+    def __init__(self, master=None, **kwargs):
+        ttk.Treeview.__init__(self, master, style='Treeview', **kwargs)
+
+        self.style = ttk.Style(self)
+        self.style.configure('Treeview')
+
+        # checkboxes are implemented with pictures
+        self.im_checked = ImageTk.PhotoImage(Image.open(IM_CHECKED), master=self)
+        self.im_unchecked = ImageTk.PhotoImage(Image.open(IM_UNCHECKED), master=self)
+        self.im_tristate = ImageTk.PhotoImage(Image.open(IM_TRISTATE), master=self)
+        self.tag_configure("unchecked", image=self.im_unchecked)
+        self.tag_configure("tristate", image=self.im_tristate)
+        self.tag_configure("checked", image=self.im_checked)
+
+        self.bind("<Button-1>", self.toggle_checkbox)
+
+    def toggle_checkbox(self, event):
+        x, y, widget = event.x, event.y, event.widget
+        elem = widget.identify("element", x, y)
+        if "image" in elem:
+            rowid = self.identify_row(event.y)
+            try:
+                tag = self.item(rowid, "tags")[0]
+            except IndexError:
+                tag = "tristate"
+            tags = list(self.item(rowid, "tags"))
+            try:
+                tags.remove(tag)
+            except ValueError:
+                pass
+            self.item(rowid, tags=tags)
+            if tag == "checked":
+                self.item(rowid, tags="unchecked")
+            else:
+                self.item(rowid, tags="checked")
+
+    def insert(self, parent, index, iid=None, **kwargs):
+        if self.tag_has("checked", parent):
+            tag = "checked"
+        else:
+            tag = 'unchecked'
+        if "tags" not in kwargs:
+            kwargs["tags"] = (tag,)
+        elif not ("unchecked" in kwargs["tags"] or "checked" in kwargs["tags"] or
+                  "tristate" in kwargs["tags"]):
+            kwargs["tags"] += (tag,)
+
+        return ttk.Treeview.insert(self, parent, index, iid, **kwargs)

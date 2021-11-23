@@ -19,6 +19,7 @@ class Application(tk.Tk):
 
         # set up callback dictionary
         self.callbacks = {
+            "change_view": self.change_view,
             "save_template_as": self.save_template_as,
             "add_transaction": self.add_transaction,
             "add_category": self.add_category,
@@ -32,6 +33,9 @@ class Application(tk.Tk):
             "get_next_budget": self.get_next_budget,
             "load_template": self.load_template,
             "set_window_size": self.set_window_size,
+            "get_recent_files": self.get_recent_files,
+            "load": self.load,
+            "remove_selected_recent_file_links": self.remove_selected_recent_file_links,
         }
 
         # set up project model
@@ -42,14 +46,26 @@ class Application(tk.Tk):
         self.main_menu = menus.MainMenu(self, self.callbacks)
         self.config(menu=self.main_menu)
 
+        # set up home page view
+        self.home_page = v.HomePage(self, self.callbacks)
+        self.home_page.grid(column=0, row=0, sticky='nswe')
+
         # set up budget view
         self.budget_view = v.BudgetView(self, self.callbacks)
-        self.budget_view.grid(column=0, row=0, sticky='nsew')
+        # self.budget_view.grid(column=0, row=0, sticky='nsew')
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
         self.update_settings_file()
+
+    def change_view(self, view_name):
+        if view_name == "home_page":
+            self.budget_view.grid_forget()
+            self.home_page.grid(sticky='nswe')
+        elif view_name == "budget_view":
+            self.home_page.grid_forget()
+            self.budget_view.grid(sticky='nswe')
 
     def update_settings_file(self):
         self.settings.update_settings_file()
@@ -78,6 +94,8 @@ class Application(tk.Tk):
             sp = v.SavePickle(initial_dir, filename=filename, title=title, mask=mask)
             if sp.filepath:
                 self.data_model.save_as_pickle(sp.filepath)
+                self.settings.update_recent_files(file_type, sp.filepath)  # update settings with recent file
+                self.update_homepage()  # for HomePage
         else:
             print(f"Your data is not of type {file_type}!")
 
@@ -103,6 +121,9 @@ class Application(tk.Tk):
     def update_frames(self):
         self.budget_view.update_frames()
 
+    def update_homepage(self):
+        self.home_page.update_recent_files_frame()
+
     @staticmethod
     def overwrite_budget_group_warning(group_name):
         """
@@ -122,30 +143,35 @@ class Application(tk.Tk):
         initial_dir = self.data_model.budgets_path
         self.load(initial_dir=initial_dir, file_type='budget')
 
-    def load(self, initial_dir, file_type):
+    def load(self, initial_dir, file_type, automatic=False, filepath=None):
         """Load template or budget."""
 
-        self.data_model.initiate_directory(initial_dir)
-        mask = [("Pickle files", "*.pkl"), ("All files", "*.*")]
-        title = f"Load {file_type.title()}"
+        if not automatic:
+            self.data_model.initiate_directory(initial_dir)
+            mask = [("Pickle files", "*.pkl"), ("All files", "*.*")]
+            title = f"Load {file_type.title()}"
+            lp = v.LoadPickle(initial_dir, title, mask)
+            filepath = lp.filepath
 
-        lp = v.LoadPickle(initial_dir, title, mask)
-        if lp.filepath:
-            result = self.data_model.load_pickle(lp.filepath)
+        if filepath:
+            result = self.data_model.load_pickle(filepath)
             if result == 'loading_error':
                 print('Failure to load. Wrong file type.')
             else:
                 if result.get('type', '') == file_type == 'template':
                     self.data_model.template_data = result
                     self.budget_view.view_data = result['template']
-                    self.update_frames()
                 elif result.get('type', '') == file_type == 'budget':
                     self.data_model.template_data = result
                     current_budget = self.data_model.template_data["current_budget"]
                     self.budget_view.view_data = result['budgets'][current_budget]
-                    self.update_frames()
                 else:
                     print(f'Not a {file_type}.')
+                    return
+                self.update_frames()  # for BudgetView
+                self.settings.update_recent_files(file_type, filepath)  # update settings with recent file
+                self.change_view('budget_view')  # change current view to BudgetView
+                self.update_homepage()  # for HomePage
 
     def load_budget_group_old(self):
         """Creates class for user to select budget grouping and then tries to open requested budget grouping."""
@@ -222,3 +248,10 @@ class Application(tk.Tk):
 
     def set_window_size(self, width, height):
         self.settings.set_window_size(width, height)
+
+    def get_recent_files(self):
+        return self.settings.get_recent_files()
+
+    def remove_selected_recent_file_links(self, to_remove):
+        self.settings.remove_from_recent_files(to_remove)
+        self.update_homepage()  # for HomePage

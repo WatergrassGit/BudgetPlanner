@@ -4,14 +4,111 @@ from tkinter import messagebox
 from tkinter import filedialog
 from decimal import Decimal
 from datetime import date
-from .widgets import AutoScrollbar, DateEntry, DollarEntry, RequiredEntry, DecimalEntry
+from os import path
+from .widgets import AutoScrollbar, DateEntry, DollarEntry, RequiredEntry, DecimalEntry, ModifiedCheckboxTreeview
+
+
+class HomePage(ttk.Frame):
+    """Home page shown upon program startup."""
+    def __init__(self, master, callbacks, **kwargs):
+        super().__init__(master, **kwargs)
+        self.callbacks = callbacks
+
+        # Frame to hold recent templates and budgets
+        self.recent_files_frame = ttk.Frame(self)
+
+        # Button which exits home page and goes directly to BudgetView
+        exit_home_button = ttk.Button(
+            self,
+            text="X",
+            command=lambda: self.callbacks['change_view']('budget_view')
+        )
+        remove_selected_button = ttk.Button(
+            self,
+            text="Remove Selected",
+            command=self.remove_recent_entries
+        )
+
+        # grid primary widgets
+        self.recent_files_frame.grid(column=1, row=0, sticky="ns")
+        exit_home_button.grid(column=2, row=0, sticky="ne")
+        remove_selected_button.grid(column=2, row=1, sticky="se")
+
+        # set grid weight
+        self.grid_columnconfigure(2, weight=1)
+
+        # Set up frame widgets
+        recent_files_header = ttk.Label(self.recent_files_frame, text="Recent Budgets and Templates")
+        recent_files_header.grid(column=0, row=0, columnspan=2)
+        self.recent_files = []
+
+        self.message = ttk.Label(self.recent_files_frame, text="None! Create some!")
+        self.check_tv = ModifiedCheckboxTreeview(self.recent_files_frame, selectmode='browse')
+
+        self.update_recent_files_frame()
+
+        self.check_tv.bind("<Double-1>", self._load)
+
+    def update_recent_files_frame(self):
+        self.recent_files = self.callbacks["get_recent_files"]()
+        if not self.recent_files:
+            self.check_tv.grid_forget()
+            self.message.grid(column=0, row=1)
+        else:
+            self.message.grid_forget()
+            self.check_tv.delete(*self.check_tv.get_children())
+            self.check_tv.grid_forget()
+            self.check_tv.grid(column=0, row=2)
+
+            self.check_tv.config(
+                columns=('type', 'filename', 'file_extension'),
+                height=len(self.recent_files)
+            )
+            self.check_tv.column('#0', width=100, stretch='NO')
+            self.check_tv.column('type', width=200)
+            self.check_tv.column('filename', width=200)
+            self.check_tv.column('file_extension', width=200)
+
+            self.check_tv.heading('#0', text='')
+            self.check_tv.heading('type', text='Budget Type', anchor='w')
+            self.check_tv.heading('filename', text='Filename', anchor='w')
+            self.check_tv.heading('file_extension', text='Extension', anchor='w')
+
+            for i, v in enumerate(self.recent_files):
+                # row content
+                fn = path.basename(v['filepath'])
+                self.check_tv.insert(
+                    parent='',
+                    index=i,
+                    iid=i,
+                    values=(
+                        f"{v['budget_type']}".title(),
+                        f"{path.splitext(fn)[0]}",
+                        f"{path.splitext(fn)[1]}",
+                    ),
+                )
+
+    def remove_recent_entries(self):
+        to_remove = []
+        for index in range(len(self.check_tv.get_children())):
+            if self.check_tv.tag_has('checked', index):
+                to_remove.append(index)
+        if to_remove:
+            self.callbacks["remove_selected_recent_file_links"](to_remove)
+
+    def _load(self, event):
+        x, y = event.x, event.y
+        rowid = int(self.check_tv.identify_row(y))
+        budget_type = self.recent_files[rowid]['budget_type']
+        fp = self.recent_files[rowid]['filepath']
+        self.callbacks['load']('', budget_type, automatic=True, filepath=fp)
 
 
 class BudgetView(ttk.Frame):
     """Page which shows selected budget to user."""
 
-    def __init__(self, master, callbacks, *args, **kwargs):
-        super().__init__(master, *args, **kwargs)
+    def __init__(self, master, callbacks, **kwargs):
+        super().__init__(master, **kwargs)
         self.callbacks = callbacks
         self.master = master
 
@@ -878,6 +975,7 @@ class CreateBudget(tk.Toplevel):
         self.view_data = self.new_budget['budgets'][newest_budget]
         self.master.budget_view.view_data = self.new_budget['budgets'][newest_budget]
         self.callbacks['update_frames']()
+        self.callbacks['change_view']("budget_view")
 
 
 class SaveBudget:

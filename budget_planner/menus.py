@@ -30,9 +30,14 @@ class MainMenu(tk.Menu):
         self.menu_file.add_separator()
         self.menu_file.add_command(label="Exit", command=self.master.destroy)
 
+        # add items to options menu
         self.menu_options.add_command(label="Add New Expense Category...", command=self.callbacks["add_category"])
         self.menu_options.add_command(label="Add New Job...", command=self.callbacks["add_job"])
         self.menu_options.add_command(label="Add New Transaction...", command=self.callbacks["add_transaction"])
+
+        # add items to view menu
+        self.menu_view.add_command(label="Home Page", command=lambda: self.callbacks['change_view']('home_page'))
+        self.menu_view.add_command(label="Budget View", command=lambda: self.callbacks['change_view']('budget_view'))
 
         # add items to help menu
         self.menu_help.add_command(label="Help", command=lambda: print("Coming soon..."))

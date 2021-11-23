@@ -286,6 +286,8 @@ class ProjectModel:
 class ProjectSettings:
     """Class to hold project settings. Uses default values whenever no other value found."""
 
+    MAX_NUMBER_OF_RECENT_FILES = 10
+
     def __init__(self, master):
         self.master = master
 
@@ -299,6 +301,38 @@ class ProjectSettings:
             self.settings = {}
 
         self.settings.setdefault('window_size', '1280x720')
+        self.settings.setdefault('recent_files', [])
+
+    def update_recent_files(self, budget_type, fp):
+        """Method to add most recent file to beginning of recent_files list."""
+
+        list_input = dict(budget_type=budget_type, filepath=fp)
+
+        while len(self.settings['recent_files']) > self.MAX_NUMBER_OF_RECENT_FILES:
+            self.settings['recent_files'].pop()
+
+        # get all copies of list_input in the recent_files list and remove them
+        indices = [i for i, x in enumerate(self.settings['recent_files']) if x == list_input]
+        indices.reverse()  # reverse order to ensure we remove correct values
+        for i in indices:
+            self.settings['recent_files'].pop(i)
+
+        # add list_input to the front of the list
+        self.settings['recent_files'].insert(0, list_input)
+        self.settings_changed = True
+
+    def remove_from_recent_files(self, indices):
+        indices.sort(reverse=True)
+        for index in indices:
+            self.settings['recent_files'].pop(index)
+        self.settings_changed = True
+
+    def clear_recent_files(self):
+        self.settings['recent_files'] = []
+        self.settings_changed = True
+
+    def get_recent_files(self):
+        return self.settings['recent_files']
 
     def set_window_size(self, width, height):
         self.settings_changed = self.settings['window_size'] != f"{width}x{height}"

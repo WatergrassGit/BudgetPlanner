@@ -43,7 +43,7 @@ and we describe their content below:
     - 'name' (key, str): '*' (str)
     - 'current_budget' (key, str): '*' (str)
     - 'order' (key, str): list of budget names
-    - 'budget' (key, str): dictionary of budgets
+    - 'budgets' (key, str): dictionary of budgets
         + 'budget1' (key, str): dict
             * income_categories (key, str): list containing dictionaries
             * expense_categories (key, str): list containing dictionaries

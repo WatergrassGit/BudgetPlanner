@@ -17,7 +17,7 @@ class MainMenu(tk.Menu):
         self.menu_help = tk.Menu(self)
 
         # add items to file menu
-        self.menu_file.add_command(label="New Budget...", command=self.callbacks["create_budget"])
+        self.menu_file.add_command(label="New...", command=self.callbacks["create_budget"])
         self.menu_file.add_command(label="Load Budget...", command=self.callbacks["load_budget"])
         self.menu_file.add_command(label="Load Template...", command=self.callbacks["load_template"])
         self.menu_file.add_separator()

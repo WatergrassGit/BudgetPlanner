@@ -327,7 +327,8 @@ class BudgetView(ttk.Frame):
 
             self.title_label.configure(text=name + ": " + sub_name)
         else:
-            self.title_label.configure(text="Template")
+            name = self.master.data_model.template_data["name"]
+            self.title_label.configure(text=name)
 
     def add_content_category_frame(self):
         """Function to fill category frame with content. Determines how to display data."""
@@ -921,40 +922,108 @@ class BudgetView(ttk.Frame):
 
 
 class CreateBudget(tk.Toplevel):
-    """Class which has pop-up window with options for user to select when creating a new Budget."""
+    """Class which has pop-up window with options for user to select when creating a new Budget or Budget Template."""
 
     def __init__(self, master, callbacks, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
         self.callbacks = callbacks
         self.master = master
 
-        self.wm_title("Create Group")
+        self.wm_title("New")
 
-        text_label_r1 = ttk.Label(self, text="Budget Group Name: ")
-        self.budget_group_name = ttk.Entry(self)
+        self.type = tk.StringVar(value='budget')
+        self.budget_select = ttk.Radiobutton(self, text="Budget", variable=self.type, value='budget', command=self.form_update)
+        self.template_select = ttk.Radiobutton(self, text="Template", variable=self.type, value='template', command=self.form_update)
+
+        self.budget_form = ttk.Frame(self)
+        self.template_form = ttk.Frame(self)
+
+        self.submit_button = ttk.Button(self, text="Submit", command=self.create_new)
+
+        self.budget_select.grid(column=0, row=0)
+        self.template_select.grid(column=1, row=0)
+        self.submit_button.grid(column=1, row=2, sticky="e")
+
+        if self.type.get() == 'budget':
+            self.budget_form.grid(column=0, row=1, columnspan=2)
+        else:
+            self.template_form.grid(column=0, row=1, columnspan=2)
+
+        # set up budget form
+        text_label_r1 = ttk.Label(self.budget_form, text="Budget Group Name: ")
+        self.budget_group_name = ttk.Entry(self.budget_form)
         self.budget_group_name.insert(0, "New Budget")
 
-        text_label_r2 = ttk.Label(self, text="Initial Budget Name: ")
-        self.budget_name = ttk.Entry(self)
+        text_label_r2 = ttk.Label(self.budget_form, text="Initial Budget Name: ")
+        self.budget_name = ttk.Entry(self.budget_form)
         self.budget_name.insert(0, "Origin")
-
-        submit_button = ttk.Button(self, text="Create", command=self.create_new_budget)
 
         text_label_r1.grid(column=0, row=0)
         text_label_r2.grid(column=0, row=1)
         self.budget_group_name.grid(column=1, row=0)
         self.budget_name.grid(column=1, row=1)
-        submit_button.grid(column=1, row=2, sticky="e")
+
+        # set up template form
+        template_text_label = ttk.Label(self.template_form, text="Template Name: ")
+        self.template_name = ttk.Entry(self.template_form)
+        self.template_name.insert(0, "New Template")
+
+        template_text_label.grid(column=0, row=0)
+        self.template_name.grid(column=1, row=0)
 
         self.new_budget = {}
+        self.new_template = {}
+
+    def form_update(self):
+        if self.type.get() == 'budget':
+            self.template_form.grid_forget()
+            self.budget_form.grid(column=0, row=1, columnspan=2)
+        else:
+            self.budget_form.grid_forget()
+            self.template_form.grid(column=0, row=1, columnspan=2)
+
+    def create_new(self):
+        """Determines if we are creating a new Budget or a new Template."""
+
+        if self.type.get() == 'budget':
+            self.create_new_budget()
+        else:
+            self.create_new_template()
+
+    def create_new_template(self):
+        """Sets defaults for a new template and then calls method to reset BudgetView with new template."""
+
+        # get template form data
+        name = self.template_name.get()
+
+        self.new_template["type"] = "template"
+        self.new_template["name"] = name
+        self.new_template["template"] = {
+            'income_categories': [],
+            'expense_categories': [],
+            'transactions': [],
+        }
+
+        self._initiate_new_template()
+
+    def _initiate_new_template(self):
+        """Resets BudgetView with new template."""
+
+        self.master.data_model.template_data = self.new_template
+
+        self.master.budget_view.view_data = self.new_template['template']
+        self.callbacks['update_frames']()
+        self.callbacks['change_view']("budget_view")
 
     def create_new_budget(self):
         """Sets defaults for a new budget and then calls method to reset BudgetView with new budget."""
 
+        # get budget form data
+        group_name = self.budget_group_name.get()
         first_budget = self.budget_name.get()
 
         self.new_budget["type"] = "budget"
-        self.new_budget["name"] = self.budget_group_name.get()
+        self.new_budget["name"] = group_name
         self.new_budget["current_budget"] = first_budget
         self.new_budget["budgets"] = {}
         self.new_budget["order"] = [first_budget]

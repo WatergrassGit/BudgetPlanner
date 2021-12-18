@@ -1,5 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
+import os
+from pathlib import Path
 import copy
 from . import views as v
 from . import menus
@@ -20,22 +22,24 @@ class Application(tk.Tk):
         # set up callback dictionary
         self.callbacks = {
             "change_view": self.change_view,
-            "save_template_as": self.save_template_as,
+            "quick_save": self.quick_save,
+            "manual_save": self.manual_save,
             "add_transaction": self.add_transaction,
             "add_category": self.add_category,
             "create_budget": self.create_budget,
             "update_frames": self.update_frames,
             "add_job": self.add_job,
-            "save_budget_as": self.save_budget_as,
             "overwrite_budget_group_warning": self.overwrite_budget_group_warning,
-            "load_budget": self.load_budget,
             "get_previous_budget": self.get_previous_budget,
             "get_next_budget": self.get_next_budget,
-            "load_template": self.load_template,
             "set_window_size": self.set_window_size,
             "get_recent_files": self.get_recent_files,
             "load": self.load,
             "remove_selected_recent_file_links": self.remove_selected_recent_file_links,
+            "update_current_file_filepath": self.update_current_file_filepath,
+            "reset_current_file_filepath": self.reset_current_file_filepath,
+            "enable_quick_save": self.enable_quick_save,
+            "disable_quick_save": self.disable_quick_save,
         }
 
         # set up project model
@@ -72,32 +76,72 @@ class Application(tk.Tk):
         # rerun every 5000 milliseconds
         self.after(5000, self.update_settings_file)
 
-    def save_template_as(self):
-        """Sends basic template information to save_as for further processing."""
-        initial_dir = self.data_model.templates_path
-        self.save_as(initial_dir=initial_dir, filename="new_template.pkl", file_type="template")
-
-    def save_budget_as(self):
-        """Sends basic budget information to save_as for further processing."""
-        initial_dir = self.data_model.budgets_path
-        self.save_as(initial_dir=initial_dir, filename="new_budget.pkl", file_type="budget")
-
-    def save_as(self, initial_dir, filename, file_type):
-        """Save template or budget."""
-
-        # before finalizing the save operations ensure we are saving the correct type of data
-        if self.data_model.template_data.get('type') == file_type:
-            self.data_model.initiate_directory(initial_dir)
-            mask = [("Pickle files", "*.pkl"), ("All files", "*.*")]
-            title = f"Save {file_type.title()} As"
-
-            sp = v.SavePickle(initial_dir, filename=filename, title=title, mask=mask)
-            if sp.filepath:
-                self.data_model.save_as_pickle(sp.filepath)
-                self.settings.update_recent_files(file_type, sp.filepath)  # update settings with recent file
+    def quick_save(self):
+        path = self.settings.settings['current_file_filepath']
+        if path:
+            if os.path.isfile(path):
+                # case when file we are trying to quick save already exists
+                # note: in the case that this file was replaced with an
+                # identically named file the new file will be overwritten
+                self.data_model.save_as_pickle(path)
+                file_type = self.data_model.template_data.get('type')
+                self.settings.update_recent_files(file_type, path)  # update settings with recent file
+                self.update_current_file_filepath(path)
+                self.enable_quick_save()
                 self.update_homepage()  # for HomePage
+            else:
+                # this is the case when the file or directory containing the file was removed
+                # in this case we call manual_save and disable the save menu button
+                # note: this case shouldn't run unless the user deletes the directory while running the program
+                self.reset_current_file_filepath()
+                self.disable_quick_save()
+                self.manual_save()
         else:
-            print(f"Your data is not of type {file_type}!")
+            # this should not run since save menu button should be disabled
+            print('new file')
+
+    def enable_quick_save(self):
+        self.main_menu.enable_quick_save()
+
+    def disable_quick_save(self):
+        self.main_menu.disable_quick_save()
+
+    def manual_save(self):
+        """Save template or budget. Automatically determines type to set default file extension."""
+
+        file_type = self.data_model.template_data.get('type')
+        file_path = self.settings.settings['current_file_filepath']
+        if file_type == "template":
+            mask = [("Template files", "*.tpl")]
+            if file_path:
+                filename = Path(file_path).name
+            else:
+                filename = "default_template.tpl"
+        else:  # case when file_type == "budget"
+            mask = [("Budget files", "*.bdg")]
+            if file_path:
+                filename = Path(file_path).name
+            else:
+                filename = 'default_budget.bdg'
+
+        mask.append(("All files", "*.*"))
+        title = f"Save {file_type.title()} As"
+
+        sp = v.SavePickle(filename=filename, title=title, mask=mask)
+        if sp.filepath:
+            self.data_model.save_as_pickle(sp.filepath)
+            self.settings.update_recent_files(file_type, sp.filepath)  # update settings with recent file
+            self.update_current_file_filepath(sp.filepath)
+            self.enable_quick_save()
+            self.update_homepage()  # for HomePage
+
+    def update_current_file_filepath(self, fp):
+        """Wrapper to call update_current_file_filepath method from settings."""
+        self.settings.update_current_file_filepath(fp)
+
+    def reset_current_file_filepath(self):
+        """Wrapper to call reset_current_file_filepath method from settings."""
+        self.settings.reset_current_file_filepath()
 
     def get_template_data(self):
         """Wrapper to call get_template_data method from data_model."""
@@ -135,22 +179,18 @@ class Application(tk.Tk):
         response = warning_class.directory_overwrite_messagebox(group_name)
         return response
 
-    def load_template(self):
-        initial_dir = self.data_model.templates_path
-        self.load(initial_dir=initial_dir, file_type='template')
-
-    def load_budget(self):
-        initial_dir = self.data_model.budgets_path
-        self.load(initial_dir=initial_dir, file_type='budget')
-
-    def load(self, initial_dir, file_type, automatic=False, filepath=None):
+    def load(self, automatic=False, filepath=None):
         """Load template or budget."""
 
         if not automatic:
-            self.data_model.initiate_directory(initial_dir)
-            mask = [("Pickle files", "*.pkl"), ("All files", "*.*")]
-            title = f"Load {file_type.title()}"
-            lp = v.LoadPickle(initial_dir, title, mask)
+            mask = [
+                ("All files", "*.*"),
+                ("Budget files", "*.bdg"),
+                ("Template files", "*.tpl"),
+                ("Pickle files", "*.pkl"),
+            ]
+            title = "Load"
+            lp = v.LoadPickle(title, mask)
             filepath = lp.filepath
 
         if filepath:
@@ -158,19 +198,19 @@ class Application(tk.Tk):
             if result == 'loading_error':
                 print('Failure to load. Wrong file type.')
             else:
-                if result.get('type', '') == file_type == 'template':
+                file_type = result.get('type', '')
+                if file_type == 'template':
                     self.data_model.template_data = result
                     self.budget_view.view_data = result['template']
-                elif result.get('type', '') == file_type == 'budget':
+                else:  # file_type == 'budget':
                     self.data_model.template_data = result
                     current_budget = self.data_model.template_data["current_budget"]
                     self.budget_view.view_data = result['budgets'][current_budget]
-                else:
-                    print(f'Not a {file_type}.')
-                    return
                 self.update_frames()  # for BudgetView
                 self.settings.update_recent_files(file_type, filepath)  # update settings with recent file
                 self.change_view('budget_view')  # change current view to BudgetView
+                self.update_current_file_filepath(filepath)
+                self.enable_quick_save()
                 self.update_homepage()  # for HomePage
 
     def load_budget_group_old(self):

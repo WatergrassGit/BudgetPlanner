@@ -1,6 +1,5 @@
 import os
 import shutil
-import csv
 import json
 import pickle
 import pandas as pd
@@ -302,6 +301,18 @@ class ProjectSettings:
 
         self.settings.setdefault('window_size', '1280x720')
         self.settings.setdefault('recent_files', [])
+        self.settings.setdefault('current_file_filepath', '')
+        self.settings['current_file_filepath'] = ''  # for now this ensures default view has no associated filepath
+
+    def update_current_file_filepath(self, fp):
+        """Stores a filepath in settings dictionary with key current_file_filepath."""
+        self.settings['current_file_filepath'] = fp
+        self.settings_changed = True
+
+    def reset_current_file_filepath(self):
+        """Reset settings dictionary by associating current_file_filepath's key to an empty string."""
+        self.settings['current_file_filepath'] = ''
+        self.settings_changed = True
 
     def update_recent_files(self, budget_type, fp):
         """Method to add most recent file to beginning of recent_files list."""

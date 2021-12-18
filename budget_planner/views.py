@@ -99,9 +99,8 @@ class HomePage(ttk.Frame):
     def _load(self, event):
         x, y = event.x, event.y
         rowid = int(self.check_tv.identify_row(y))
-        budget_type = self.recent_files[rowid]['budget_type']
         fp = self.recent_files[rowid]['filepath']
-        self.callbacks['load']('', budget_type, automatic=True, filepath=fp)
+        self.callbacks['load'](automatic=True, filepath=fp)
 
 
 class BudgetView(ttk.Frame):
@@ -990,6 +989,9 @@ class CreateBudget(tk.Toplevel):
         else:
             self.create_new_template()
 
+        self.callbacks['reset_current_file_filepath']()
+        self.callbacks['disable_quick_save']()
+
     def create_new_template(self):
         """Sets defaults for a new template and then calls method to reset BudgetView with new template."""
 
@@ -1200,10 +1202,9 @@ class SaveBudgetGroup:
 
 class SavePickle:
     """Class which has pop-up window allowing user to save a file in Pickle format."""
-    def __init__(self, initial_dir, filename, title, mask, *args, **kwargs):
+    def __init__(self, filename, title, mask, *args, **kwargs):
         self.filepath = filedialog.asksaveasfilename(
             title=title,
-            initialdir=initial_dir,
             initialfile=filename,
             filetypes=mask
         )
@@ -1211,9 +1212,8 @@ class SavePickle:
 
 class LoadPickle:
     """Class which has pop-up window allowing user to select a Pickle file to load."""
-    def __init__(self, initial_dir, title, mask, *args, **kwargs):
+    def __init__(self, title, mask, *args, **kwargs):
         self.filepath = filedialog.askopenfilename(
             title=title,
-            initialdir=initial_dir,
             filetypes=mask
         )

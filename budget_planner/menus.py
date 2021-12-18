@@ -18,15 +18,13 @@ class MainMenu(tk.Menu):
 
         # add items to file menu
         self.menu_file.add_command(label="New...", command=self.callbacks["create_budget"])
-        self.menu_file.add_command(label="Load Budget...", command=self.callbacks["load_budget"])
-        self.menu_file.add_command(label="Load Template...", command=self.callbacks["load_template"])
+        self.menu_file.add_command(label="Load...", command=self.callbacks["load"])
         self.menu_file.add_separator()
-        self.menu_file.add_command(label="Save Budget", command=lambda: print("Coming soon..."))
-        self.menu_file.add_command(label="Save Budget As...", command=self.callbacks["save_budget_as"])
-        self.menu_file.add_command(label="Save Template As...", command=self.callbacks["save_template_as"])
+        self.menu_file.add_command(label="Save", command=self.callbacks["quick_save"], state="disabled")
+        self.menu_file.add_command(label="Save As...", command=self.callbacks["manual_save"])
         self.menu_file.add_separator()
-        self.menu_file.add_command(label="Export...", command=lambda: print("Coming soon..."))
-        self.menu_file.add_command(label="Print...", command=lambda: print("Coming soon..."))
+        self.menu_file.add_command(label="Export...", command=lambda: print("Coming soon..."), state="disabled")
+        self.menu_file.add_command(label="Print...", command=lambda: print("Coming soon..."), state="disabled")
         self.menu_file.add_separator()
         self.menu_file.add_command(label="Exit", command=self.master.destroy)
 
@@ -50,3 +48,9 @@ class MainMenu(tk.Menu):
         self.add_cascade(menu=self.menu_options, label="Options")
         self.add_cascade(menu=self.menu_view, label="View")
         self.add_cascade(menu=self.menu_help, label="Help")
+
+    def enable_quick_save(self):
+        self.menu_file.entryconfig("Save", state="normal")
+
+    def disable_quick_save(self):
+        self.menu_file.entryconfig("Save", state="disabled")
